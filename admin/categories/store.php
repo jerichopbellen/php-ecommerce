@@ -34,7 +34,7 @@ if (isset($_POST['submit'])) {
             mysqli_stmt_close($check_stmt);
             mysqli_rollback($conn);
             $_SESSION['error'] = "Category name already exists.";
-            header("Location: index.php");
+            header("Location: create.php");
             exit;
         }
         mysqli_stmt_close($check_stmt);
