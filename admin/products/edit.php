@@ -27,10 +27,19 @@ if ($_SESSION['role'] !== 'admin') {
 
 include '../../includes/adminHeader.php';
 include '../../includes/config.php';
+include '../../includes/alert.php';
 
-$id = intval($_GET['id']);
+// Input sanitization
+$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
-$product = mysqli_query($conn, "
+if ($id === false || $id === null) {
+    $_SESSION['flash'] = "Invalid product ID.";
+    header("Location: index.php");
+    exit;
+}
+
+// Prepared statement for product query
+$stmt = mysqli_prepare($conn, "
     SELECT 
         p.product_id, 
         p.name AS product_name, 
@@ -43,13 +52,39 @@ $product = mysqli_query($conn, "
     FROM products p
     INNER JOIN brands b ON p.brand_id = b.brand_id
     INNER JOIN categories c ON p.category_id = c.category_id
-    WHERE p.product_id = {$id}
+    WHERE p.product_id = ?
     LIMIT 1
 ");
-$product = mysqli_fetch_assoc($product);
 
-$brands = mysqli_query($conn, "SELECT * FROM brands WHERE brand_id != {$product['brand_id']} ORDER BY name");
-$categories = mysqli_query($conn, "SELECT * FROM categories WHERE category_id != {$product['category_id']} ORDER BY name");
+if (!$stmt) {
+    die("Query preparation failed: " . mysqli_error($conn));
+}
+
+mysqli_stmt_bind_param($stmt, "i", $id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$product = mysqli_fetch_assoc($result);
+mysqli_stmt_close($stmt);
+
+if (!$product) {
+    $_SESSION['flash'] = "Product not found.";
+    header("Location: index.php");
+    exit;
+}
+
+// Prepared statement for brands query
+$stmt = mysqli_prepare($conn, "SELECT brand_id, name FROM brands WHERE brand_id != ? ORDER BY name");
+mysqli_stmt_bind_param($stmt, "i", $product['brand_id']);
+mysqli_stmt_execute($stmt);
+$brands = mysqli_stmt_get_result($stmt);
+mysqli_stmt_close($stmt);
+
+// Prepared statement for categories query
+$stmt = mysqli_prepare($conn, "SELECT category_id, name FROM categories WHERE category_id != ? ORDER BY name");
+mysqli_stmt_bind_param($stmt, "i", $product['category_id']);
+mysqli_stmt_execute($stmt);
+$categories = mysqli_stmt_get_result($stmt);
+mysqli_stmt_close($stmt);
 
 // Parse dimension into length, width, height
 $length = $width = $height = '';
@@ -70,27 +105,27 @@ if (!empty($product['dimension']) && preg_match('/(\d+(\.\d+)?)\s*x\s*(\d+(\.\d+
                     </h4>
 
                     <form action="update.php" method="POST">
-                        <input type="hidden" name="product_id" value="<?= $product['product_id'] ?>">
+                        <input type="hidden" name="product_id" value="<?=htmlspecialchars($product['product_id'], ENT_QUOTES, 'UTF-8') ?>">
 
                         <!-- Product Name -->
                         <div class="mb-3">
                             <label for="productName" class="form-label">Product Name</label>
-                            <input type="text" class="form-control" id="productName" name="productName" value="<?= htmlspecialchars($product['product_name']) ?>" required>
+                            <input type="text" class="form-control" id="productName" name="productName" value="<?= htmlspecialchars($product['product_name'], ENT_QUOTES, 'UTF-8') ?>" required>
                         </div>
 
                         <!-- Description -->
                         <div class="mb-3">
                             <label for="description" class="form-label">Description</label>
-                            <input type="text" class="form-control" id="description" name="description" value="<?= htmlspecialchars($product['description']) ?>" required>
+                            <input type="text" class="form-control" id="description" name="description" value="<?= htmlspecialchars($product['description'], ENT_QUOTES, 'UTF-8') ?>" required>
                         </div>
 
                         <!-- Brand -->
                         <div class="mb-3">
                             <label for="brand" class="form-label">Brand</label>
                             <select class="form-select" id="brand" name="brand_id" required>
-                                <option value="<?= $product['brand_id'] ?>" selected><?= htmlspecialchars($product['brand_name']) ?></option>
+                                <option value="<?= htmlspecialchars($product['brand_id'], ENT_QUOTES, 'UTF-8') ?>" selected><?= htmlspecialchars($product['brand_name'], ENT_QUOTES, 'UTF-8') ?></option>
                                 <?php while ($row = mysqli_fetch_assoc($brands)) : ?>
-                                    <option value="<?= $row['brand_id'] ?>"><?= htmlspecialchars($row['name']) ?></option>
+                                    <option value="<?= htmlspecialchars($row['brand_id'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8') ?></option>
                                 <?php endwhile; ?>
                             </select>
                         </div>
@@ -99,9 +134,9 @@ if (!empty($product['dimension']) && preg_match('/(\d+(\.\d+)?)\s*x\s*(\d+(\.\d+
                         <div class="mb-3">
                             <label for="category" class="form-label">Category</label>
                             <select class="form-select" id="category" name="category_id" required>
-                                <option value="<?= $product['category_id'] ?>" selected><?= htmlspecialchars($product['category_name']) ?></option>
+                                <option value="<?= htmlspecialchars($product['category_id'], ENT_QUOTES, 'UTF-8') ?>" selected><?= htmlspecialchars($product['category_name'], ENT_QUOTES, 'UTF-8') ?></option>
                                 <?php while ($row = mysqli_fetch_assoc($categories)) : ?>
-                                    <option value="<?= $row['category_id'] ?>"><?= htmlspecialchars($row['name']) ?></option>
+                                    <option value="<?= htmlspecialchars($row['category_id'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8') ?></option>
                                 <?php endwhile; ?>
                             </select>
                         </div>
@@ -111,13 +146,13 @@ if (!empty($product['dimension']) && preg_match('/(\d+(\.\d+)?)\s*x\s*(\d+(\.\d+
                             <label class="form-label">Dimensions (cm)</label>
                             <div class="row g-2">
                                 <div class="col-md-4">
-                                    <input type="number" step="0.01" class="form-control" name="length" placeholder="Length" value="<?= $length ?>" required>
+                                    <input type="number" step="0.01" class="form-control" name="length" placeholder="Length" value="<?= htmlspecialchars($length, ENT_QUOTES, 'UTF-8') ?>" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <input type="number" step="0.01" class="form-control" name="width" placeholder="Width" value="<?= $width ?>" required>
+                                    <input type="number" step="0.01" class="form-control" name="width" placeholder="Width" value="<?= htmlspecialchars($width, ENT_QUOTES, 'UTF-8') ?>" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <input type="number" step="0.01" class="form-control" name="height" placeholder="Height" value="<?= $height ?>" required>
+                                    <input type="number" step="0.01" class="form-control" name="height" placeholder="Height" value="<?= htmlspecialchars($height, ENT_QUOTES, 'UTF-8') ?>" required>
                                 </div>
                             </div>
                         </div>
@@ -138,4 +173,4 @@ if (!empty($product['dimension']) && preg_match('/(\d+(\.\d+)?)\s*x\s*(\d+(\.\d+
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<?php include '../../includes/footer.php'; ?>red>red>red>

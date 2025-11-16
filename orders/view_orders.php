@@ -9,11 +9,18 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-$user_id = $_SESSION['user_id'];
+// Input sanitization
+$user_id = filter_var($_SESSION['user_id'], FILTER_VALIDATE_INT);
+if ($user_id === false) {
+    die("Invalid user ID");
+}
 
-// Fetch orders
+// Fetch orders 
 $order_sql = "SELECT * FROM orders WHERE user_id = ? AND status != 'Cancelled' AND status != 'Received' ORDER BY created_at DESC";
 $order_stmt = mysqli_prepare($conn, $order_sql);
+if (!$order_stmt) {
+    die("Error preparing statement: " . mysqli_error($conn));
+}
 mysqli_stmt_bind_param($order_stmt, "i", $user_id);
 mysqli_stmt_execute($order_stmt);
 $order_result = mysqli_stmt_get_result($order_stmt);
@@ -29,12 +36,12 @@ $order_result = mysqli_stmt_get_result($order_stmt);
             <div class="card mb-4 shadow-sm">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <div>
-                        <strong>Tracking #:</strong> <?= htmlspecialchars($order['tracking_number']) ?><br>
-                        <small class="text-muted">Placed on <?= date('F j, Y \a\t H:i', strtotime($order['created_at'])) ?></small>
+                        <strong>Tracking #:</strong> <?= htmlspecialchars($order['tracking_number'], ENT_QUOTES, 'UTF-8') ?><br>
+                        <small class="text-muted">Placed on <?= htmlspecialchars(date('F j, Y \a\t H:i', strtotime($order['created_at'])), ENT_QUOTES, 'UTF-8') ?></small>
                     </div>
                     <?php
-                    $status = $order['status'];
-                    switch ($status) {
+                    $status = htmlspecialchars($order['status'], ENT_QUOTES, 'UTF-8');
+                    switch ($order['status']) {
                         case 'Pending':
                             $badge_class = 'bg-warning text-dark';
                             break;
@@ -57,13 +64,18 @@ $order_result = mysqli_stmt_get_result($order_stmt);
                             $badge_class = 'bg-dark text-white';
                     }
                     ?>
-                    <span class="badge <?= $badge_class ?>"><?= htmlspecialchars($status) ?></span>
+                    <span class="badge <?= $badge_class ?>"><?= $status ?></span>
                 </div>
                 <div class="card-body">
-                    <p><strong>Payment Method:</strong> <?= htmlspecialchars(ucwords($order['payment_method'])) ?></p>
+                    <p><strong>Payment Method:</strong> <?= htmlspecialchars(ucwords($order['payment_method']), ENT_QUOTES, 'UTF-8') ?></p>
 
                     <?php
-                    $order_id = $order['order_id'];
+                    $order_id = filter_var($order['order_id'], FILTER_VALIDATE_INT);
+                    if ($order_id === false) {
+                        echo "<p class='text-danger'>Invalid order ID</p>";
+                        continue;
+                    }
+                    
                     $items_sql = "
                         SELECT oi.quantity, oi.price, pv.color, pv.material, p.name AS product_name
                         FROM order_items oi
@@ -72,6 +84,10 @@ $order_result = mysqli_stmt_get_result($order_stmt);
                         WHERE oi.order_id = ?
                     ";
                     $items_stmt = mysqli_prepare($conn, $items_sql);
+                    if (!$items_stmt) {
+                        echo "<p class='text-danger'>Error loading order items</p>";
+                        continue;
+                    }
                     mysqli_stmt_bind_param($items_stmt, "i", $order_id);
                     mysqli_stmt_execute($items_stmt);
                     $items_result = mysqli_stmt_get_result($items_stmt);
@@ -98,26 +114,27 @@ $order_result = mysqli_stmt_get_result($order_stmt);
                                 $color = $item['color'];
                                 $material = $item['material'];
                                 if ($color && $material) {
-                                    $variant = htmlspecialchars("$color / $material");
+                                    $variant = htmlspecialchars("$color / $material", ENT_QUOTES, 'UTF-8');
                                 } elseif ($color) {
-                                    $variant = htmlspecialchars($color);
+                                    $variant = htmlspecialchars($color, ENT_QUOTES, 'UTF-8');
                                 } elseif ($material) {
-                                    $variant = htmlspecialchars($material);
+                                    $variant = htmlspecialchars($material, ENT_QUOTES, 'UTF-8');
                                 } else {
                                     $variant = "N/A";
                                 }
                             ?>
                             <tr>
-                                <td><?= htmlspecialchars($item['product_name']) ?></td>
-                                <td><?= htmlspecialchars($variant ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($item['product_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= $variant ?></td>
                                 <td><?= $qty ?></td>
                                 <td>₱<?= number_format($price, 2) ?></td>
                                 <td>₱<?= number_format($subtotal, 2) ?></td>
                             </tr>
                             <?php endwhile; ?>
+                            <?php mysqli_stmt_close($items_stmt); ?>
                             <tr class="table-light">
                                 <td colspan="4" class="text-end"><strong>Total:</strong></td>
-                                <td><strong>₱<?= number_format($total, 2) ?></strong></td>
+                                <td><strong>₱<?=number_format($total, 2) ?></strong></td>
                             </tr>
                         </tbody>
                     </table>
@@ -125,7 +142,7 @@ $order_result = mysqli_stmt_get_result($order_stmt);
                     <div class="text-end mt-3">
                         <?php if (in_array($order['status'], ['Pending', 'Processing'])): ?>
                             <form action="cancel_order.php" method="POST" onsubmit="return confirm('Are you sure you want to cancel this order?');" class="d-inline">
-                                <input type="hidden" name="order_id" value="<?= $order['order_id'] ?>">
+                                <input type="hidden" name="order_id" value="<?=htmlspecialchars($order['order_id'], ENT_QUOTES, 'UTF-8') ?>">
                                 <button type="submit" class="btn btn-outline-danger">
                                     <i class="bi bi-x-circle me-1"></i> Cancel Order
                                 </button>
@@ -138,7 +155,7 @@ $order_result = mysqli_stmt_get_result($order_stmt);
 
                         <?php if ($order['status'] === 'Delivered'): ?>
                             <form action="confirm_received.php" method="POST" onsubmit="return confirm('Confirm you have received this order?');" class="d-inline">
-                                <input type="hidden" name="order_id" value="<?= $order['order_id'] ?>">
+                                <input type="hidden" name="order_id" value="<?=htmlspecialchars($order['order_id'], ENT_QUOTES, 'UTF-8') ?>">
                                 <button type="submit" class="btn btn-success">
                                     <i class="bi bi-check-circle me-1"></i> Order Received
                                 </button>
@@ -148,7 +165,8 @@ $order_result = mysqli_stmt_get_result($order_stmt);
                 </div>
             </div>
         <?php endwhile; ?>
+        <?php mysqli_stmt_close($order_stmt); ?>
     <?php endif; ?>
 </div>
 
-<?php include('../includes/footer.php'); ?>
+<?php include('../includes/footer.php'); ?>?>">

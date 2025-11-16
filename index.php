@@ -3,8 +3,13 @@ session_start();
 include('./includes/header.php');
 include('./includes/config.php');
 
+// --- Input Sanitization Function ---
+function sanitize_input($data) {
+    return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
+}
+
 // --- Search handling ---
-$keyword = isset($_GET['search']) ? trim($_GET['search']) : '';
+$keyword = isset($_GET['search']) ? sanitize_input($_GET['search']) : '';
 
 if ($keyword !== '') {
     ?>
@@ -50,14 +55,18 @@ if ($keyword !== '') {
                         ORDER BY p.product_id ASC";
 
         $stmt = $conn->prepare($search_sql);
-        $stmt->bind_param("ssss", $like, $like, $like, $like);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        if (!$stmt) {
+            error_log("Prepare failed: " . $conn->error);
+            echo "<div class='alert alert-danger'>An error occurred. Please try again later.</div>";
+        } else {
+            $stmt->bind_param("ssss", $like, $like, $like, $like);
+            $stmt->execute();
+            $result = $stmt->get_result();
 
-        $itemCount = $result ? mysqli_num_rows($result) : 0;
+            $itemCount = $result ? mysqli_num_rows($result) : 0;
         ?>
         <h2 class="text-center mb-4">
-            <i class="bi bi-search me-2"></i>Search results for '<?=htmlspecialchars($keyword) ?>' (<?=$itemCount ?>)
+            <i class="bi bi-search me-2"></i>Search results for '<?=htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8') ?>' (<?=$itemCount ?>)
         </h2>
 
         <?php if ($result && $itemCount > 0): ?>
@@ -90,19 +99,19 @@ if ($keyword !== '') {
                     }
 
                     $rating = isset($row['average_rating']) ? round($row['average_rating'], 1) : 0;
-                    $img = htmlspecialchars($row['img_path'] ?: 'placeholder.png');
-                    $dimension = htmlspecialchars($row['dimension'] ?: 'N/A');
+                    $img = htmlspecialchars($row['img_path'] ?: 'placeholder.png', ENT_QUOTES, 'UTF-8');
+                    $dimension = htmlspecialchars($row['dimension'] ?: 'N/A', ENT_QUOTES, 'UTF-8');
                 ?>
 
                 <div class="col">
                     <div class="card h-100 shadow-sm <?=$is_out_of_stock ? 'opacity-50' : '' ?>">
-                        <a href="product_details.php?product_id=<?= $product_id ?>" class="text-decoration-none text-dark">
-                            <img src="<?= $img ?>" class="card-img-top" alt="" style="height: 200px; object-fit: cover;">
+                        <a href="product_details.php?product_id=<?=$product_id ?>" class="text-decoration-none text-dark">
+                            <img src="<?=$img ?>" class="card-img-top" alt="" style="height: 200px; object-fit: cover;">
                             <div class="card-body">
-                                <h5 class="card-title"><?=htmlspecialchars($row['product_name']) ?></h5>
-                                <p class="card-text text-muted"><?= htmlspecialchars($row['brand_name']) ?> • <?= htmlspecialchars($row['category_name']) ?></p>
-                                <p class="card-text"><small class="text-muted"><i class="bi bi-rulers me-1"></i><?= $dimension ?></small></p>
-                                <p class="card-text fw-bold"><?= $price_display ?></p>
+                                <h5 class="card-title"><?=htmlspecialchars($row['product_name'], ENT_QUOTES, 'UTF-8') ?></h5>
+                                <p class="card-text text-muted"><?=htmlspecialchars($row['brand_name'], ENT_QUOTES, 'UTF-8') ?> • <?=htmlspecialchars($row['category_name'], ENT_QUOTES, 'UTF-8') ?></p>
+                                <p class="card-text"><small class="text-muted"><i class="bi bi-rulers me-1"></i><?=$dimension ?></small></p>
+                                <p class="card-text fw-bold"><?=$price_display ?></p>
                                 <?php if ($is_out_of_stock): ?>
                                     <span class="badge bg-danger mb-2">Out of Stock</span>
                                 <?php endif; ?>
@@ -140,19 +149,25 @@ if ($keyword !== '') {
         <?php endif;
 
         $stmt->close();
+        }
         ?>
     </div>
 <?php
 } else {
-    // Get filter parameters
+    // Get filter parameters with sanitization
     $selected_category = isset($_GET['category']) && $_GET['category'] !== '' ? intval($_GET['category']) : 0;
     $selected_brand = isset($_GET['brand']) && $_GET['brand'] !== '' ? intval($_GET['brand']) : 0;
-    $selected_material = isset($_GET['material']) ? trim($_GET['material']) : '';
-    $selected_color = isset($_GET['color']) ? trim($_GET['color']) : '';
-    $selected_dimension = isset($_GET['dimension']) ? trim($_GET['dimension']) : '';
-    $selected_availability = isset($_GET['availability']) ? $_GET['availability'] : '';
-    $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? floatval($_GET['min_price']) : null;
-    $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? floatval($_GET['max_price']) : null;
+    $selected_material = isset($_GET['material']) ? sanitize_input($_GET['material']) : '';
+    $selected_color = isset($_GET['color']) ? sanitize_input($_GET['color']) : '';
+    $selected_dimension = isset($_GET['dimension']) ? sanitize_input($_GET['dimension']) : '';
+    $selected_availability = isset($_GET['availability']) ? sanitize_input($_GET['availability']) : '';
+    $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? max(0, floatval($_GET['min_price'])) : null;
+    $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? max(0, floatval($_GET['max_price'])) : null;
+    
+    // Validate availability filter
+    if ($selected_availability !== '' && !in_array($selected_availability, ['in_stock', 'out_of_stock'])) {
+        $selected_availability = '';
+    }
     ?>
     <div class="container my-5">
         <h2 class="text-center mb-4"><i class="bi bi-shop-window me-2"></i>Browse Products</h2>
@@ -173,14 +188,19 @@ if ($keyword !== '') {
                                     <option value="">All categories</option>
                                     <?php
                                     $category_sql = "SELECT category_id, name FROM categories ORDER BY name ASC";
-                                    $category_result = mysqli_query($conn, $category_sql);
-                                    if ($category_result && mysqli_num_rows($category_result) > 0) {
-                                        while ($cat = mysqli_fetch_assoc($category_result)) {
-                                            $cid = intval($cat['category_id']);
-                                            $cname = htmlspecialchars($cat['name']);
-                                            $sel = ($cid === $selected_category) ? " selected" : "";
-                                            echo "<option value='{$cid}'{$sel}>{$cname}</option>";
+                                    $category_stmt = $conn->prepare($category_sql);
+                                    if ($category_stmt) {
+                                        $category_stmt->execute();
+                                        $category_result = $category_stmt->get_result();
+                                        if ($category_result && mysqli_num_rows($category_result) > 0) {
+                                            while ($cat = $category_result->fetch_assoc()) {
+                                                $cid = intval($cat['category_id']);
+                                                $cname = htmlspecialchars($cat['name'], ENT_QUOTES, 'UTF-8');
+                                                $sel = ($cid === $selected_category) ? " selected" : "";
+                                                echo "<option value='{$cid}'{$sel}>{$cname}</option>";
+                                            }
                                         }
+                                        $category_stmt->close();
                                     }
                                     ?>
                                 </select>
@@ -193,14 +213,19 @@ if ($keyword !== '') {
                                     <option value="">All brands</option>
                                     <?php
                                     $brand_sql = "SELECT brand_id, name FROM brands ORDER BY name ASC";
-                                    $brand_result = mysqli_query($conn, $brand_sql);
-                                    if ($brand_result && mysqli_num_rows($brand_result) > 0) {
-                                        while ($brand = mysqli_fetch_assoc($brand_result)) {
-                                            $bid = intval($brand['brand_id']);
-                                            $bname = htmlspecialchars($brand['name']);
-                                            $sel = ($bid === $selected_brand) ? " selected" : "";
-                                            echo "<option value='{$bid}'{$sel}>{$bname}</option>";
+                                    $brand_stmt = $conn->prepare($brand_sql);
+                                    if ($brand_stmt) {
+                                        $brand_stmt->execute();
+                                        $brand_result = $brand_stmt->get_result();
+                                        if ($brand_result && mysqli_num_rows($brand_result) > 0) {
+                                            while ($brand = $brand_result->fetch_assoc()) {
+                                                $bid = intval($brand['brand_id']);
+                                                $bname = htmlspecialchars($brand['name'], ENT_QUOTES, 'UTF-8');
+                                                $sel = ($bid === $selected_brand) ? " selected" : "";
+                                                echo "<option value='{$bid}'{$sel}>{$bname}</option>";
+                                            }
                                         }
+                                        $brand_stmt->close();
                                     }
                                     ?>
                                 </select>
@@ -213,13 +238,18 @@ if ($keyword !== '') {
                                     <option value="">All materials</option>
                                     <?php
                                     $material_sql = "SELECT DISTINCT material FROM product_variants WHERE material IS NOT NULL AND material != '' ORDER BY material ASC";
-                                    $material_result = mysqli_query($conn, $material_sql);
-                                    if ($material_result && mysqli_num_rows($material_result) > 0) {
-                                        while ($mat = mysqli_fetch_assoc($material_result)) {
-                                            $mname = htmlspecialchars($mat['material']);
-                                            $sel = ($mname === $selected_material) ? " selected" : "";
-                                            echo "<option value='{$mname}'{$sel}>{$mname}</option>";
+                                    $material_stmt = $conn->prepare($material_sql);
+                                    if ($material_stmt) {
+                                        $material_stmt->execute();
+                                        $material_result = $material_stmt->get_result();
+                                        if ($material_result && mysqli_num_rows($material_result) > 0) {
+                                            while ($mat = $material_result->fetch_assoc()) {
+                                                $mname = htmlspecialchars($mat['material'], ENT_QUOTES, 'UTF-8');
+                                                $sel = ($mname === $selected_material) ? " selected" : "";
+                                                echo "<option value='{$mname}'{$sel}>{$mname}</option>";
+                                            }
                                         }
+                                        $material_stmt->close();
                                     }
                                     ?>
                                 </select>
@@ -232,13 +262,18 @@ if ($keyword !== '') {
                                     <option value="">All colors</option>
                                     <?php
                                     $color_sql = "SELECT DISTINCT color FROM product_variants WHERE color IS NOT NULL AND color != '' ORDER BY color ASC";
-                                    $color_result = mysqli_query($conn, $color_sql);
-                                    if ($color_result && mysqli_num_rows($color_result) > 0) {
-                                        while ($col = mysqli_fetch_assoc($color_result)) {
-                                            $cname = htmlspecialchars($col['color']);
-                                            $sel = ($cname === $selected_color) ? " selected" : "";
-                                            echo "<option value='{$cname}'{$sel}>{$cname}</option>";
+                                    $color_stmt = $conn->prepare($color_sql);
+                                    if ($color_stmt) {
+                                        $color_stmt->execute();
+                                        $color_result = $color_stmt->get_result();
+                                        if ($color_result && mysqli_num_rows($color_result) > 0) {
+                                            while ($col = $color_result->fetch_assoc()) {
+                                                $cname = htmlspecialchars($col['color'], ENT_QUOTES, 'UTF-8');
+                                                $sel = ($cname === $selected_color) ? " selected" : "";
+                                                echo "<option value='{$cname}'{$sel}>{$cname}</option>";
+                                            }
                                         }
+                                        $color_stmt->close();
                                     }
                                     ?>
                                 </select>
@@ -251,13 +286,18 @@ if ($keyword !== '') {
                                     <option value="">All dimensions</option>
                                     <?php
                                     $dimension_sql = "SELECT DISTINCT dimension FROM products WHERE dimension IS NOT NULL AND dimension != '' ORDER BY dimension ASC";
-                                    $dimension_result = mysqli_query($conn, $dimension_sql);
-                                    if ($dimension_result && mysqli_num_rows($dimension_result) > 0) {
-                                        while ($dim = mysqli_fetch_assoc($dimension_result)) {
-                                            $dname = htmlspecialchars($dim['dimension']);
-                                            $sel = ($dname === $selected_dimension) ? " selected" : "";
-                                            echo "<option value='{$dname}'{$sel}>{$dname}</option>";
+                                    $dimension_stmt = $conn->prepare($dimension_sql);
+                                    if ($dimension_stmt) {
+                                        $dimension_stmt->execute();
+                                        $dimension_result = $dimension_stmt->get_result();
+                                        if ($dimension_result && mysqli_num_rows($dimension_result) > 0) {
+                                            while ($dim = $dimension_result->fetch_assoc()) {
+                                                $dname = htmlspecialchars($dim['dimension'], ENT_QUOTES, 'UTF-8');
+                                                $sel = ($dname === $selected_dimension) ? " selected" : "";
+                                                echo "<option value='{$dname}'{$sel}>{$dname}</option>";
+                                            }
                                         }
+                                        $dimension_stmt->close();
                                     }
                                     ?>
                                 </select>
@@ -268,10 +308,10 @@ if ($keyword !== '') {
                                 <label class="form-label fw-bold"><i class="bi bi-currency-dollar me-1"></i>Price Range</label>
                                 <div class="row g-2">
                                     <div class="col-6">
-                                        <input type="number" name="min_price" class="form-control form-control-sm" placeholder="Min" value="<?=$min_price !== null ? $min_price : '' ?>" step="0.01" min="0">
+                                        <input type="number" name="min_price" class="form-control form-control-sm" placeholder="Min" value="<?=$min_price !== null ? htmlspecialchars($min_price, ENT_QUOTES, 'UTF-8') : '' ?>" step="0.01" min="0">
                                     </div>
                                     <div class="col-6">
-                                        <input type="number" name="max_price" class="form-control form-control-sm" placeholder="Max" value="<?=$max_price !== null ? $max_price : '' ?>" step="0.01" min="0">
+                                        <input type="number" name="max_price" class="form-control form-control-sm" placeholder="Max" value="<?=$max_price !== null ? htmlspecialchars($max_price, ENT_QUOTES, 'UTF-8') : '' ?>" step="0.01" min="0">
                                     </div>
                                 </div>
                             </div>
@@ -379,90 +419,95 @@ if ($keyword !== '') {
                                 ORDER BY p.product_id ASC";
 
                 $stmt = $conn->prepare($product_sql);
-                if (count($params) > 0) {
-                    $stmt->bind_param($param_types, ...$params);
-                }
-                $stmt->execute();
-                $product_result = $stmt->get_result();
+                if (!$stmt) {
+                    error_log("Prepare failed: " . $conn->error);
+                    echo "<div class='alert alert-danger'>An error occurred. Please try again later.</div>";
+                } else {
+                    if (count($params) > 0) {
+                        $stmt->bind_param($param_types, ...$params);
+                    }
+                    $stmt->execute();
+                    $product_result = $stmt->get_result();
 
-                if ($product_result && mysqli_num_rows($product_result) > 0):
-                    echo "<div class='row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4'>";
-                    $price_stmt = $conn->prepare("SELECT MIN(v.price) AS min_price, MAX(v.price) AS max_price FROM product_variants v WHERE v.product_id = ?");
+                    if ($product_result && mysqli_num_rows($product_result) > 0):
+                        echo "<div class='row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4'>";
+                        $price_stmt = $conn->prepare("SELECT MIN(v.price) AS min_price, MAX(v.price) AS max_price FROM product_variants v WHERE v.product_id = ?");
 
-                    while ($row = $product_result->fetch_assoc()):
-                        $product_id = intval($row['product_id']);
-                        $total_stock = intval($row['total_stock']);
-                        $is_out_of_stock = $total_stock <= 0;
-                        $min = $max = null;
+                        while ($row = $product_result->fetch_assoc()):
+                            $product_id = intval($row['product_id']);
+                            $total_stock = intval($row['total_stock']);
+                            $is_out_of_stock = $total_stock <= 0;
+                            $min = $max = null;
 
-                        if ($price_stmt) {
-                            $price_stmt->bind_param("i", $product_id);
-                            $price_stmt->execute();
-                            $price_res = $price_stmt->get_result();
-                            if ($price_res && $pr = $price_res->fetch_assoc()) {
-                                $min = $pr['min_price'] !== null ? (float)$pr['min_price'] : null;
-                                $max = $pr['max_price'] !== null ? (float)$pr['max_price'] : null;
+                            if ($price_stmt) {
+                                $price_stmt->bind_param("i", $product_id);
+                                $price_stmt->execute();
+                                $price_res = $price_stmt->get_result();
+                                if ($price_res && $pr = $price_res->fetch_assoc()) {
+                                    $min = $pr['min_price'] !== null ? (float)$pr['min_price'] : null;
+                                    $max = $pr['max_price'] !== null ? (float)$pr['max_price'] : null;
+                                }
                             }
-                        }
 
-                        if ($min === null) {
-                            $price_display = "Price not available";
-                        } elseif ($min == $max) {
-                            $price_display = "₱" . number_format($min, 2);
-                        } else {
-                            $price_display = "₱" . number_format($min, 2) . " - ₱" . number_format($max, 2);
-                        }
+                            if ($min === null) {
+                                $price_display = "Price not available";
+                            } elseif ($min == $max) {
+                                $price_display = "₱" . number_format($min, 2);
+                            } else {
+                                $price_display = "₱" . number_format($min, 2) . " - ₱" . number_format($max, 2);
+                            }
 
-                        $rating = isset($row['average_rating']) ? round($row['average_rating'], 1) : 0;
-                        $img = htmlspecialchars($row['img_path'] ?: 'placeholder.png');
-                        $dimension = htmlspecialchars($row['dimension'] ?: 'N/A');
-                ?>
+                            $rating = isset($row['average_rating']) ? round($row['average_rating'], 1) : 0;
+                            $img = htmlspecialchars($row['img_path'] ?: 'placeholder.png', ENT_QUOTES, 'UTF-8');
+                            $dimension = htmlspecialchars($row['dimension'] ?: 'N/A', ENT_QUOTES, 'UTF-8');
+                    ?>
 
-                <div class="col">
-                    <div class="card h-100 shadow-sm <?=$is_out_of_stock ? 'opacity-50' : '' ?>">
-                        <a href="product_details.php?product_id=<?= $product_id ?>" class="text-decoration-none text-dark">
-                            <img src="<?=$img ?>" class="card-img-top" alt="" style="height: 200px; object-fit: cover;">
-                            <div class="card-body">
-                                <h5 class="card-title"><?=htmlspecialchars($row['product_name']) ?></h5>
-                                <p class="card-text text-muted"><?=htmlspecialchars($row['brand_name']) ?> • <?=htmlspecialchars($row['category_name']) ?></p>
-                                <p class="card-text"><small class="text-muted"><i class="bi bi-rulers me-1"></i><?=$dimension ?></small></p>
-                                <p class="card-text fw-bold"><?=$price_display ?></p>
-                                <?php if ($is_out_of_stock): ?>
-                                    <span class="badge bg-danger mb-2">Out of Stock</span>
-                                <?php endif; ?>
-                                <div class="rating mb-2">
-                                    <?php for ($i = 1; $i <= 5; $i++): ?>
-                                        <?php if ($rating >= $i): ?>
-                                            <i class="bi bi-star-fill text-warning"></i>
-                                        <?php elseif ($rating >= $i - 0.5): ?>
-                                            <i class="bi bi-star-half text-warning"></i>
-                                        <?php else: ?>
-                                            <i class="bi bi-star text-secondary"></i>
-                                        <?php endif; ?>
-                                    <?php endfor; ?>
-                                    <span class="text-muted ms-1"><?=number_format($rating, 1) ?></span>
+                    <div class="col">
+                        <div class="card h-100 shadow-sm <?=$is_out_of_stock ? 'opacity-50' : '' ?>">
+                            <a href="product_details.php?product_id=<?= $product_id ?>" class="text-decoration-none text-dark">
+                                <img src="<?=$img ?>" class="card-img-top" alt="" style="height: 200px; object-fit: cover;">
+                                <div class="card-body">
+                                    <h5 class="card-title"><?=htmlspecialchars($row['product_name'], ENT_QUOTES, 'UTF-8') ?></h5>
+                                    <p class="card-text text-muted"><?=htmlspecialchars($row['brand_name'], ENT_QUOTES, 'UTF-8') ?> • <?=htmlspecialchars($row['category_name'], ENT_QUOTES, 'UTF-8') ?></p>
+                                    <p class="card-text"><small class="text-muted"><i class="bi bi-rulers me-1"></i><?=$dimension ?></small></p>
+                                    <p class="card-text fw-bold"><?=$price_display ?>
+                                    <?php if ($is_out_of_stock): ?>
+                                        <span class="badge bg-danger mb-2">Out of Stock</span>
+                                    <?php endif; ?>
+                                    <div class="rating mb-2">
+                                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                                            <?php if ($rating >= $i): ?>
+                                                <i class="bi bi-star-fill text-warning"></i>
+                                            <?php elseif ($rating >= $i - 0.5): ?>
+                                                <i class="bi bi-star-half text-warning"></i>
+                                            <?php else: ?>
+                                                <i class="bi bi-star text-secondary"></i>
+                                            <?php endif; ?>
+                                        <?php endfor; ?>
+                                        <span class="text-muted ms-1"><?=number_format($rating, 1) ?></span>
+                                    </div>
                                 </div>
+                            </a>
+                            <div class="card-footer text-center">
+                                <form method="POST" action="./cart/add_to_cart.php">
+                                    <input type="hidden" name="product_id" value="<?=$product_id ?>">   
+                                    <button type="submit" name="submit" class="btn btn-outline-primary w-100" <?=$is_out_of_stock ? 'disabled' : '' ?>>
+                                        <?=$is_out_of_stock ? 'Out of Stock' : 'Add to Cart' ?>
+                                    </button>
+                                </form>
                             </div>
-                        </a>
-                        <div class="card-footer text-center">
-                            <form method="POST" action="./cart/add_to_cart.php">
-                                <input type="hidden" name="product_id" value="<?=$product_id ?>">   
-                                <button type="submit" name="submit" class="btn btn-outline-primary w-100" <?=$is_out_of_stock ? 'disabled' : '' ?>>
-                                    <?= $is_out_of_stock ? 'Out of Stock' : 'Add to Cart' ?>
-                                </button>
-                            </form>
                         </div>
                     </div>
-                </div>
 
-                <?php endwhile;
-                    if ($price_stmt) $price_stmt->close();
-                    echo "</div>";
-                else:
-                    echo "<div class='alert alert-info text-center'>No products found matching your filters.</div>";
-                endif;
+                    <?php endwhile;
+                        if ($price_stmt) $price_stmt->close();
+                        echo "</div>";
+                    else:
+                        echo "<div class='alert alert-info text-center'>No products found matching your filters.</div>";
+                    endif;
 
-                $stmt->close();
+                    $stmt->close();
+                }
                 ?>
             </div>
         </div>

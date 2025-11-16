@@ -9,13 +9,26 @@ if (!isset($_SESSION['user_id'])) {
 include '../includes/config.php';
 include '../includes/header.php';
 
-// Fetch user info from database
-$user_id = $_SESSION['user_id'];
+// Fetch user info from database using prepared statement
+$user_id = filter_var($_SESSION['user_id'], FILTER_VALIDATE_INT);
+if (!$user_id) {
+    die("Invalid user ID");
+}
+
 $stmt = mysqli_prepare($conn, "SELECT first_name, last_name, email FROM users WHERE user_id = ?");
+if (!$stmt) {
+    die("Database error: " . mysqli_error($conn));
+}
+
 mysqli_stmt_bind_param($stmt, "i", $user_id);
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 $user = mysqli_fetch_assoc($result);
+mysqli_stmt_close($stmt);
+
+if (!$user) {
+    die("User not found");
+}
 ?>
 
 <div class="container my-5">
@@ -26,11 +39,11 @@ $user = mysqli_fetch_assoc($result);
 
         <div class="col-md-6">
             <label for="name" class="form-label">Your Name</label>
-            <input type="text" name="name" id="name" class="form-control" value="<?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>" readonly>
+            <input type="text" name="name" id="name" class="form-control" value="<?=htmlspecialchars($user['first_name'] . ' ' . $user['last_name'], ENT_QUOTES, 'UTF-8') ?>" readonly>
         </div>
         <div class="col-md-6">
             <label for="email" class="form-label">Your Email</label>
-            <input type="email" name="email" id="email" class="form-control" value="<?= htmlspecialchars($user['email']) ?>" readonly>
+            <input type="email" name="email" id="email" class="form-control" value="<?=htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') ?>" readonly>
         </div>
         <div class="col-12">
             <label for="subject" class="form-label">Subject</label>

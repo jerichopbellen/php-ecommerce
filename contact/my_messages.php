@@ -9,8 +9,14 @@ if (!isset($_SESSION['user_id'])) {
 include '../includes/config.php';
 include '../includes/header.php';
 
-$user_email = $_SESSION['email']; // assuming email is stored in session
-$result = mysqli_query($conn, "SELECT * FROM contact_messages WHERE email = '$user_email' ORDER BY submitted_at DESC");
+// Sanitize and validate email from session
+$user_email = filter_var($_SESSION['email'], FILTER_SANITIZE_EMAIL);
+
+// Use prepared statement to prevent SQL injection
+$stmt = mysqli_prepare($conn, "SELECT * FROM contact_messages WHERE email = ? ORDER BY submitted_at DESC");
+mysqli_stmt_bind_param($stmt, "s", $user_email);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 ?>
 
 <div class="container my-5">
@@ -21,7 +27,7 @@ $result = mysqli_query($conn, "SELECT * FROM contact_messages WHERE email = '$us
         <div class="list-group mt-4">
             <?php while ($row = mysqli_fetch_assoc($result)): ?>
                 <div class="list-group-item">
-                    <h5><?= htmlspecialchars($row['subject']) ?></h5>
+                    <h5><?=htmlspecialchars($row['subject']) ?></h5>
                     <p class="mb-1"><?= nl2br(htmlspecialchars($row['message'])) ?></p>
                     <small class="text-muted">Sent: <?= date('Y-m-d H:i', strtotime($row['submitted_at'])) ?></small>
 
@@ -40,4 +46,7 @@ $result = mysqli_query($conn, "SELECT * FROM contact_messages WHERE email = '$us
     <?php endif; ?>
 </div>
 
-<?php include '../includes/footer.php'; ?>
+<?php 
+mysqli_stmt_close($stmt);
+include '../includes/footer.php'; 
+?>

@@ -27,9 +27,12 @@ if ($_SESSION['role'] !== 'admin') {
 
 include '../../includes/adminHeader.php';
 include '../../includes/config.php';
+include '../../includes/alert.php';
 
-
-$result = mysqli_query($conn, "SELECT * FROM products ORDER BY name ASC");
+// Use prepared statement to fetch products
+$stmt = mysqli_prepare($conn, "SELECT product_id, name FROM products ORDER BY name ASC");
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 ?>
 
 <div class="container my-5">
@@ -45,7 +48,7 @@ $result = mysqli_query($conn, "SELECT * FROM products ORDER BY name ASC");
                             <select class="form-select" id="product" name="product" required>
                                 <option value="" disabled selected>Select Product</option>
                                 <?php while ($row = mysqli_fetch_assoc($result)) : ?>
-                                    <option value="<?= $row['product_id'] ?>"><?= htmlspecialchars($row['name']) ?></option>
+                                    <option value="<?= intval($row['product_id']) ?>"><?= htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8') ?></option>
                                 <?php endwhile; ?>
                             </select>
                         </div>
@@ -75,4 +78,7 @@ $result = mysqli_query($conn, "SELECT * FROM products ORDER BY name ASC");
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<?php 
+mysqli_stmt_close($stmt);
+include '../../includes/footer.php'; 
+?>

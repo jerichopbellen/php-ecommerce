@@ -8,14 +8,54 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     exit;
 }
 
-    include '../../includes/config.php';
-    // print_r($_POST);
-    $result = mysqli_query($conn, " UPDATE users SET role = '{$_POST['role']}' WHERE user_id = {$_POST['user_id']}");
-    // var_dump($result);
-    if ($result) {
+include '../../includes/config.php';
+
+// Input sanitization
+$user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+$role = filter_input(INPUT_POST, 'role', FILTER_SANITIZE_STRING);
+
+// Validate inputs
+if ($user_id === false || $user_id === null || empty($role)) {
+    $_SESSION['error'] = "Invalid input data.";
+    header("Location: index.php");
+    exit;
+}
+
+// Optional: Validate role against allowed values
+$allowed_roles = ['admin', 'user', 'moderator']; // Adjust as needed
+if (!in_array($role, $allowed_roles)) {
+    $_SESSION['error'] = "Invalid role specified.";
+    header("Location: edit.php?id={$user_id}");
+    exit;
+}
+
+// Begin transaction
+mysqli_begin_transaction($conn);
+
+try {
+    // Prepared statement
+    $stmt = mysqli_prepare($conn, "UPDATE users SET role = ? WHERE user_id = ?");
+    mysqli_stmt_bind_param($stmt, "si", $role, $user_id);
+    $result = mysqli_stmt_execute($stmt);
+    
+    if ($result && mysqli_stmt_affected_rows($stmt) > 0) {
+        mysqli_commit($conn);
+        mysqli_stmt_close($stmt);
         $_SESSION['success'] = "User role updated successfully.";
         header("Location: index.php");
         exit;
+    } else {
+        mysqli_rollback($conn);
+        mysqli_stmt_close($stmt);
+        $_SESSION['error'] = "Update failed or no changes made.";
+        header("Location: edit.php?id={$user_id}");
+        exit;
     }
-    
+} catch (Exception $e) {
+    mysqli_rollback($conn);
+    $_SESSION['error'] = "Update failed.";
+    header("Location: edit.php?id={$user_id}");
+    exit;
+}
+
 ?>

@@ -4,11 +4,11 @@ include("../includes/config.php");
 include("../includes/header.php");
 
 // Sanitize and validate input
-$first_name   = trim($_POST['first_name'] ?? '');
-$last_name    = trim($_POST['last_name'] ?? '');
+$first_name   = trim(htmlspecialchars($_POST['first_name'] ?? '', ENT_QUOTES, 'UTF-8'));
+$last_name    = trim(htmlspecialchars($_POST['last_name'] ?? '', ENT_QUOTES, 'UTF-8'));
 $email        = trim($_POST['email'] ?? '');
-$password     = trim($_POST['password'] ?? '');
-$confirmPass  = trim($_POST['confirmPass'] ?? '');
+$password     = $_POST['password'] ?? '';
+$confirmPass  = $_POST['confirmPass'] ?? '';
 
 if (!$first_name || !$last_name || !$email || !$password || !$confirmPass) {
     $_SESSION['message'] = 'All fields are required.';
@@ -36,10 +36,12 @@ mysqli_stmt_execute($emailCheckStmt);
 mysqli_stmt_store_result($emailCheckStmt);
 
 if (mysqli_stmt_num_rows($emailCheckStmt) > 0) {
+    mysqli_stmt_close($emailCheckStmt);
     $_SESSION['message'] = 'Email is already registered. Please use a different one.';
     header("Location: register.php");
     exit();
 }
+mysqli_stmt_close($emailCheckStmt);
 
 // Handle profile photo upload
 $img_path = null;
@@ -75,17 +77,24 @@ if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] === UPL
     }
 }
 
-// Hash password
-$hashed_password = sha1($password);
+// Begin transaction
+mysqli_begin_transaction($conn);
 
-// Insert user
-$sql = "INSERT INTO users (first_name, last_name, email, password_hash, img_path) VALUES (?, ?, ?, ?, ?)";
-$stmt = mysqli_prepare($conn, $sql);
-mysqli_stmt_bind_param($stmt, 'sssss', $first_name, $last_name, $email, $hashed_password, $img_path);
-$result = mysqli_stmt_execute($stmt);
+try {
+    // Hash password (consider using password_hash() instead of sha1)
+    $hashed_password = sha1($password);
 
-if ($result) {
+    // Insert user
+    $sql = "INSERT INTO users (first_name, last_name, email, password_hash, img_path) VALUES (?, ?, ?, ?, ?)";
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, 'sssss', $first_name, $last_name, $email, $hashed_password, $img_path);
+    
+    if (!mysqli_stmt_execute($stmt)) {
+        throw new Exception('Failed to insert user');
+    }
+    
     $userId = mysqli_insert_id($conn);
+    mysqli_stmt_close($stmt);
 
     // Fetch role
     $roleQuery = "SELECT role FROM users WHERE user_id = ?";
@@ -94,6 +103,10 @@ if ($result) {
     mysqli_stmt_execute($roleStmt);
     $roleResult = mysqli_stmt_get_result($roleStmt);
     $roleData = mysqli_fetch_assoc($roleResult);
+    mysqli_stmt_close($roleStmt);
+
+    // Commit transaction
+    mysqli_commit($conn);
 
     // Set session
     $_SESSION['user_id'] = $userId;
@@ -102,7 +115,16 @@ if ($result) {
 
     header("Location: profile.php");
     exit();
-} else {
+    
+} catch (Exception $e) {
+    // Rollback on error
+    mysqli_rollback($conn);
+    
+    // Delete uploaded file if exists
+    if ($img_path && file_exists($targetPath)) {
+        unlink($targetPath);
+    }
+    
     $_SESSION['message'] = 'Registration failed. Please try again.';
     header("Location: register.php");
     exit();

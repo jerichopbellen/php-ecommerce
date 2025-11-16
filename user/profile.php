@@ -10,25 +10,40 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Fetch current profile
-$userId = $_SESSION['user_id'] ?? null;
+$userId = filter_var($_SESSION['user_id'], FILTER_VALIDATE_INT);
+if (!$userId) {
+    die("Invalid user ID");
+}
 
 $profile_sql = "SELECT first_name, last_name, email, img_path FROM users WHERE user_id = ?";
 $profile_stmt = mysqli_prepare($conn, $profile_sql);
+if (!$profile_stmt) {
+    die("Profile query preparation failed: " . mysqli_error($conn));
+}
 mysqli_stmt_bind_param($profile_stmt, 'i', $userId);
 mysqli_stmt_execute($profile_stmt);
 $profile_result = mysqli_stmt_get_result($profile_stmt);
 $profile = mysqli_fetch_assoc($profile_result);
+mysqli_stmt_close($profile_stmt);
+
+if (!$profile) {
+    die("Profile not found");
+}
 
 // Fetch saved addresses
 $addresses = [];
-$address_sql = "SELECT * FROM addresses WHERE user_id = ?";
+$address_sql = "SELECT address_id, recipient, street, barangay, city, province, zipcode, country, phone FROM addresses WHERE user_id = ?";
 $stmt = mysqli_prepare($conn, $address_sql);
+if (!$stmt) {
+    die("Address query preparation failed: " . mysqli_error($conn));
+}
 mysqli_stmt_bind_param($stmt, 'i', $userId);
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 while ($row = mysqli_fetch_assoc($result)) {
     $addresses[] = $row;
 }
+mysqli_stmt_close($stmt);
 ?>
 
 <div class="container my-5">
@@ -40,7 +55,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                 <div class="card-body text-center">
                     <?php
                         $imgPath = !empty($profile['img_path']) 
-                            ? $profile['img_path'] 
+                            ? htmlspecialchars($profile['img_path'], ENT_QUOTES, 'UTF-8')
                             : '/Furnitures/user/avatars/default-avatar.png';
                     ?>
                     <img src="<?= $imgPath ?>" 
@@ -48,7 +63,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                         style="width:120px; height:120px; object-fit:cover;" 
                         alt="Profile Picture">
 
-                    <h4><?= htmlspecialchars($profile['first_name']) ?> <?= htmlspecialchars($profile['last_name']) ?></h4>
+                    <h4><?= htmlspecialchars($profile['first_name'], ENT_QUOTES, 'UTF-8') ?> <?=htmlspecialchars($profile['last_name'], ENT_QUOTES, 'UTF-8') ?></h4>
 
                     <!-- Upload Form -->
                     <form method="POST" action="update_profile.php" enctype="multipart/form-data">
@@ -77,16 +92,16 @@ while ($row = mysqli_fetch_assoc($result)) {
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label for="fname" class="form-label">First Name</label>
-                                <input type="text" name="fname" id="fname" class="form-control" value="<?= htmlspecialchars($profile['first_name']) ?>" required>
+                                <input type="text" name="fname" id="fname" class="form-control" value="<?= htmlspecialchars($profile['first_name'], ENT_QUOTES, 'UTF-8') ?>" required>
                             </div>
                             <div class="col-md-6">
                                 <label for="lname" class="form-label">Last Name</label>
-                                <input type="text" name="lname" id="lname" class="form-control" value="<?= htmlspecialchars($profile['last_name']) ?>" required>
+                                <input type="text" name="lname" id="lname" class="form-control" value="<?= htmlspecialchars($profile['last_name'], ENT_QUOTES, 'UTF-8') ?>" required>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Email</label>
-                            <input type="email" class="form-control" value="<?= htmlspecialchars($profile['email']) ?>" disabled>
+                            <input type="email" class="form-control" value="<?= htmlspecialchars($profile['email'], ENT_QUOTES, 'UTF-8') ?>" disabled>
                         </div>
                         <button type="submit" name="submit_profile" class="btn btn-outline-primary w-100">
                             <i class="bi bi-pencil-square me-1"></i> Save Changes
@@ -148,16 +163,16 @@ while ($row = mysqli_fetch_assoc($result)) {
                                 <tbody>
                                     <?php foreach ($addresses as $addr): ?>
                                         <tr>
-                                            <td><?= htmlspecialchars($addr['recipient']) ?></td>
-                                            <td><?= htmlspecialchars($addr['street']) ?></td>
-                                            <td><?= htmlspecialchars($addr['barangay']) ?></td>
-                                            <td><?= htmlspecialchars($addr['city']) ?></td>
-                                            <td><?= htmlspecialchars($addr['province']) ?></td>
-                                            <td><?= htmlspecialchars($addr['zipcode']) ?></td>
-                                            <td><?= htmlspecialchars($addr['country']) ?></td>
-                                            <td><?= htmlspecialchars($addr['phone']) ?></td>
+                                            <td><?= htmlspecialchars($addr['recipient'], ENT_QUOTES, 'UTF-8') ?></td>
+                                            <td><?= htmlspecialchars($addr['street'], ENT_QUOTES, 'UTF-8') ?></td>
+                                            <td><?= htmlspecialchars($addr['barangay'], ENT_QUOTES, 'UTF-8') ?></td>
+                                            <td><?= htmlspecialchars($addr['city'], ENT_QUOTES, 'UTF-8') ?></td>
+                                            <td><?= htmlspecialchars($addr['province'], ENT_QUOTES, 'UTF-8') ?></td>
+                                            <td><?= htmlspecialchars($addr['zipcode'], ENT_QUOTES, 'UTF-8') ?></td>
+                                            <td><?= htmlspecialchars($addr['country'], ENT_QUOTES, 'UTF-8') ?></td>
+                                            <td><?= htmlspecialchars($addr['phone'], ENT_QUOTES, 'UTF-8') ?></td>
                                             <td>
-                                                <a href="update_profile.php?delete_address=<?= $addr['address_id'] ?>" class="text-danger" onclick="return confirm('Remove this address?')">
+                                                <a href="update_profile.php?delete_address=<?= (int)$addr['address_id'] ?>" class="text-danger" onclick="return confirm('Remove this address?')">
                                                     <i class="bi bi-trash"></i>
                                                 </a>
                                             </td>
@@ -227,3 +242,5 @@ while ($row = mysqli_fetch_assoc($result)) {
             </div>
         </div>
     </div>
+</div>
+<?php include("../includes/footer.php"); ?>

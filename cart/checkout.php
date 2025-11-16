@@ -11,46 +11,67 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = intval($_SESSION['user_id']);
 
-// Fetch cart items with product & variant info
-$sql = "
-    SELECT 
-        ci.cart_item_id,
-        ci.quantity,
-        pv.variant_id,
-        pv.product_id,
-        pv.price AS variant_price,
-        pv.color,
-        pv.material,
-        p.name AS product_name
-    FROM cart_items ci
-    INNER JOIN product_variants pv ON pv.variant_id = ci.variant_id
-    INNER JOIN products p ON p.product_id = pv.product_id
-    WHERE ci.user_id = ?
-";
-$stmt = mysqli_prepare($conn, $sql);
-mysqli_stmt_bind_param($stmt, "i", $user_id);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
+// Start transaction
+mysqli_begin_transaction($conn);
 
-// Calculate total
-$total = 0;
-$cart_items = [];
-while ($row = mysqli_fetch_assoc($result)) {
-    $qty = max(1, (int)$row['quantity']);
-    $subtotal = $row['variant_price'] * $qty;
-    $total += $subtotal;
-    $cart_items[] = $row;
-}
+try {
+    // Fetch cart items with product & variant info
+    $sql = "
+        SELECT 
+            ci.cart_item_id,
+            ci.quantity,
+            pv.variant_id,
+            pv.product_id,
+            pv.price AS variant_price,
+            pv.color,
+            pv.material,
+            p.name AS product_name
+        FROM cart_items ci
+        INNER JOIN product_variants pv ON pv.variant_id = ci.variant_id
+        INNER JOIN products p ON p.product_id = pv.product_id
+        WHERE ci.user_id = ?
+    ";
+    $stmt = mysqli_prepare($conn, $sql);
+    if (!$stmt) {
+        throw new Exception("Failed to prepare cart query");
+    }
+    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
 
-// Fetch saved addresses
-$addresses = [];
-$address_sql = "SELECT * FROM addresses WHERE user_id = ?";
-$address_stmt = mysqli_prepare($conn, $address_sql);
-mysqli_stmt_bind_param($address_stmt, "i", $user_id);
-mysqli_stmt_execute($address_stmt);
-$address_result = mysqli_stmt_get_result($address_stmt);
-while ($addr = mysqli_fetch_assoc($address_result)) {
-    $addresses[] = $addr;
+    // Calculate total
+    $total = 0;
+    $cart_items = [];
+    while ($row = mysqli_fetch_assoc($result)) {
+        $qty = max(1, (int)$row['quantity']);
+        $subtotal = (float)$row['variant_price'] * $qty;
+        $total += $subtotal;
+        $cart_items[] = $row;
+    }
+    mysqli_stmt_close($stmt);
+
+    // Fetch saved addresses
+    $addresses = [];
+    $address_sql = "SELECT * FROM addresses WHERE user_id = ?";
+    $address_stmt = mysqli_prepare($conn, $address_sql);
+    if (!$address_stmt) {
+        throw new Exception("Failed to prepare address query");
+    }
+    mysqli_stmt_bind_param($address_stmt, "i", $user_id);
+    mysqli_stmt_execute($address_stmt);
+    $address_result = mysqli_stmt_get_result($address_stmt);
+    while ($addr = mysqli_fetch_assoc($address_result)) {
+        $addresses[] = $addr;
+    }
+    mysqli_stmt_close($address_stmt);
+
+    // Commit transaction
+    mysqli_commit($conn);
+
+} catch (Exception $e) {
+    mysqli_rollback($conn);
+    error_log("Checkout error: " . $e->getMessage());
+    die("An error occurred while loading checkout. Please try again.");
 }
 ?>
 
@@ -85,18 +106,18 @@ while ($addr = mysqli_fetch_assoc($address_result)) {
                                     $material = trim($item['material'] ?? '');
 
                                     if ($color && $material) {
-                                        $variant_label = htmlspecialchars("$color / $material");
+                                        $variant_label = htmlspecialchars("$color / $material", ENT_QUOTES, 'UTF-8');
                                     } elseif ($color) {
-                                        $variant_label = htmlspecialchars($color);
+                                        $variant_label = htmlspecialchars($color, ENT_QUOTES, 'UTF-8');
                                     } elseif ($material) {
-                                        $variant_label = htmlspecialchars($material);
+                                        $variant_label = htmlspecialchars($material, ENT_QUOTES, 'UTF-8');
                                     } else {
                                         $variant_label = "N/A";
                                     }                                
                                 ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($item['product_name']) ?></td>
-                                    <td><?= htmlspecialchars($variant_label ?: 'N/A') ?></td>
+                                    <td><?=htmlspecialchars($item['product_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td><?= $variant_label ?></td>
                                     <td><?= $qty ?></td>
                                     <td>₱<?= number_format($price, 2) ?></td>
                                     <td>₱<?= number_format($subtotal, 2) ?></td>
@@ -123,7 +144,7 @@ while ($addr = mysqli_fetch_assoc($address_result)) {
                                 <select id="address_select" name="address_id" class="form-select" required onchange="toggleNewAddressForm(this)">
                                     <option value="">-- Select saved address --</option>
                                     <?php foreach ($addresses as $addr): ?>
-                                        <option value="<?= $addr['address_id'] ?>">
+                                        <option value="<?= intval($addr['address_id']) ?>">
                                             <?= htmlspecialchars(
                                                 $addr['recipient'] . ', ' .
                                                 $addr['street'] . ', ' .
@@ -132,7 +153,9 @@ while ($addr = mysqli_fetch_assoc($address_result)) {
                                                 $addr['province'] . ', ' .
                                                 $addr['country'] . ', ' .
                                                 $addr['zipcode'] . ', ' .
-                                                $addr['phone']
+                                                $addr['phone'],
+                                                ENT_QUOTES,
+                                                'UTF-8'
                                             ) ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -145,39 +168,39 @@ while ($addr = mysqli_fetch_assoc($address_result)) {
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="recipient" class="form-label">Recipient Name</label>
-                                        <input type="text" id="recipient" name="recipient" class="form-control" required>
+                                        <input type="text" id="recipient" name="recipient" class="form-control" maxlength="100">
                                     </div>
                                     <div class="col-md-6">
                                         <label for="phone" class="form-label">Phone</label>
-                                        <input type="text" name="phone" id="phone" class="form-control" required
-                                            pattern="^\d+$"
-                                            title="Enter numbers only">
+                                        <input type="text" name="phone" id="phone" class="form-control"
+                                            pattern="^\d{10,15}$"
+                                            title="Enter 10-15 digits only" maxlength="15">
                                     </div>
                                     <div class="col-md-6">
                                         <label for="street" class="form-label">Street</label>
-                                        <input type="text" id="street" name="street" class="form-control" required>
+                                        <input type="text" id="street" name="street" class="form-control" maxlength="200">
                                     </div>
                                     <div class="col-md-6">
                                         <label for="barangay" class="form-label">Barangay</label>
-                                        <input type="text" id="barangay" name="barangay" class="form-control" required>
+                                        <input type="text" id="barangay" name="barangay" class="form-control" maxlength="100">
                                     </div>
                                     <div class="col-md-6">
                                         <label for="city" class="form-label">City</label>
-                                        <input type="text" id="city" name="city" class="form-control" required>
+                                        <input type="text" id="city" name="city" class="form-control" maxlength="100">
                                     </div>
                                     <div class="col-md-6">
                                         <label for="province" class="form-label">Province</label>
-                                        <input type="text" id="province" name="province" class="form-control" required>
+                                        <input type="text" id="province" name="province" class="form-control" maxlength="100">
                                     </div>
                                     <div class="col-md-6">
                                         <label for="zipcode" class="form-label">Zipcode</label>
-                                        <input type="text" name="zipcode" id="zipcode" class="form-control" required
-                                            pattern="^\d+$"
-                                            title="Enter numbers only">
+                                        <input type="text" name="zipcode" id="zipcode" class="form-control"
+                                            pattern="^\d{4,10}$"
+                                            title="Enter 4-10 digits only" maxlength="10">
                                     </div>
                                     <div class="col-md-6">
                                         <label for="country" class="form-label">Country</label>
-                                        <input type="text" id="country" name="country" class="form-control" required>
+                                        <input type="text" id="country" name="country" class="form-control" maxlength="100">
                                     </div>
                                 </div>
                             </div>
@@ -190,7 +213,7 @@ while ($addr = mysqli_fetch_assoc($address_result)) {
                                 </select>
                             </div>
 
-                            <input type="hidden" name="total_amount" value="<?= $total ?>">
+                            <input type="hidden" name="total_amount" value="<?=htmlspecialchars(number_format($total, 2, '.', ''), ENT_QUOTES, 'UTF-8') ?>">
                             <button type="submit" class="btn btn-outline-success w-100">
                                 <i class="bi bi-bag-check"></i> Place Order
                             </button>

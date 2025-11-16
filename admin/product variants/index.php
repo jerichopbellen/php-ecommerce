@@ -29,9 +29,10 @@ include '../../includes/adminHeader.php';
 include '../../includes/config.php';
 include '../../includes/alert.php';
 
-$keyword = isset($_GET['search']) ? strtolower(trim($_GET['search'])) : '';
-$keyword = mysqli_real_escape_string($conn, $keyword);
+// Input sanitization
+$keyword = isset($_GET['search']) ? trim($_GET['search']) : '';
 
+// Prepared statement for SELECT query
 $sql = "
     SELECT 
         p.name AS product_name,
@@ -47,17 +48,29 @@ $sql = "
     INNER JOIN categories c ON p.category_id = c.category_id
 ";
 
-if ($keyword) {
-    $sql .= " AND (
-        p.name LIKE '%$keyword%' OR
-        v.color LIKE '%$keyword%' OR
-        v.material LIKE '%$keyword%'
+if ($keyword !== '') {
+    $sql .= " WHERE (
+        p.name LIKE ? OR
+        v.color LIKE ? OR
+        v.material LIKE ?
     )";
 }
 
 $sql .= " ORDER BY p.name ASC";
 
-$result = mysqli_query($conn, $sql);
+$stmt = mysqli_prepare($conn, $sql);
+
+if ($stmt === false) {
+    die("Error preparing statement: " . mysqli_error($conn));
+}
+
+if ($keyword !== '') {
+    $searchParam = "%{$keyword}%";
+    mysqli_stmt_bind_param($stmt, "sss", $searchParam, $searchParam, $searchParam);
+}
+
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 $itemCount = mysqli_num_rows($result);
 ?>
 
@@ -71,7 +84,7 @@ $itemCount = mysqli_num_rows($result);
 
     <form method="GET" class="mb-4">
         <div class="input-group">
-            <input type="text" name="search" class="form-control" placeholder="Search by product, color, or material..." value="<?= htmlspecialchars($keyword) ?>">
+            <input type="text" name="search" class="form-control" placeholder="Search by product, color, or material..." value="<?=htmlspecialchars($keyword) ?>">
             <button class="btn btn-outline-secondary" type="submit">
                 <i class="bi bi-search"></i>
             </button>
@@ -80,7 +93,7 @@ $itemCount = mysqli_num_rows($result);
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <h5 class="card-title mb-3">Total Variants: <?= $itemCount ?></h5>
+            <h5 class="card-title mb-3">Total Variants: <?=$itemCount ?></h5>
             <div class="table-responsive">
                 <table class="table table-hover align-middle table-bordered">
                     <thead class="table-light">
@@ -97,17 +110,17 @@ $itemCount = mysqli_num_rows($result);
                     <tbody>
                         <?php while ($row = mysqli_fetch_assoc($result)) : ?>
                             <tr>
-                                <td><?= htmlspecialchars($row['product_name']) ?></td>
-                                <td><?= htmlspecialchars($row['color']) ?></td>
-                                <td><?= htmlspecialchars($row['material']) ?></td>
-                                <td>₱<?= number_format($row['price'], 2) ?></td>
-                                <td><?= $row['quantity'] ?></td>
-                                <td><?= htmlspecialchars($row['category_name']) ?></td>
+                                <td><?=htmlspecialchars($row['product_name']) ?></td>
+                                <td><?=htmlspecialchars($row['color']) ?></td>
+                                <td><?=htmlspecialchars($row['material']) ?></td>
+                                <td>₱<?=number_format($row['price'], 2) ?></td>
+                                <td><?=htmlspecialchars($row['quantity']) ?></td>
+                                <td><?=htmlspecialchars($row['category_name']) ?></td>
                                 <td class="text-center">
-                                    <a href="edit.php?id=<?= $row['variant_id'] ?>" class="text-primary me-2" title="Edit">
+                                    <a href="edit.php?id=<?=intval($row['variant_id']) ?>" class="text-primary me-2" title="Edit">
                                         <i class="fa-regular fa-pen-to-square"></i>
                                     </a>
-                                    <a href="delete.php?id=<?= $row['variant_id'] ?>" class="text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this variant?')">
+                                    <a href="delete.php?id=<?=intval($row['variant_id']) ?>" class="text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this variant?')">
                                         <i class="fa-solid fa-trash"></i>
                                     </a>
                                 </td>
@@ -125,4 +138,7 @@ $itemCount = mysqli_num_rows($result);
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<?php 
+mysqli_stmt_close($stmt);
+include '../../includes/footer.php'; 
+?>

@@ -11,13 +11,14 @@ if (!$userId) {
 
 // Update profile info
 if (isset($_POST['submit_profile'])) {
-    $fname = trim($_POST['fname']);
-    $lname = trim($_POST['lname']);
+    $fname = htmlspecialchars(trim($_POST['fname']), ENT_QUOTES, 'UTF-8');
+    $lname = htmlspecialchars(trim($_POST['lname']), ENT_QUOTES, 'UTF-8');
 
     $sql = "UPDATE users SET first_name = ?, last_name = ? WHERE user_id = ?";
     $stmt = mysqli_prepare($conn, $sql);
     mysqli_stmt_bind_param($stmt, 'ssi', $fname, $lname, $userId);
     mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
 
     $_SESSION['success'] = 'Profile updated successfully.';
     header("Location: profile.php");
@@ -34,6 +35,7 @@ if (isset($_POST['remove_avatar'])) {
     mysqli_stmt_execute($check_stmt);
     $check_result = mysqli_stmt_get_result($check_stmt);
     $row = mysqli_fetch_assoc($check_result);
+    mysqli_stmt_close($check_stmt);
 
     if ($row && $row['img_path'] === $defaultPath) {
         // Already default avatar
@@ -44,6 +46,7 @@ if (isset($_POST['remove_avatar'])) {
         $stmt = mysqli_prepare($conn, $sql);
         mysqli_stmt_bind_param($stmt, 'si', $defaultPath, $userId);
         mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
 
         $_SESSION['success'] = 'Profile picture removed.';
     }
@@ -76,10 +79,12 @@ if (isset($_POST['submit_password'])) {
         $hashed_new = sha1($new);
         mysqli_stmt_bind_param($update_stmt, 'si', $hashed_new, $userId);
         mysqli_stmt_execute($update_stmt);
+        mysqli_stmt_close($update_stmt);
         $_SESSION['success'] = 'Password updated successfully.';
     } else {
         $_SESSION['error'] = 'Current password is incorrect.';
     }
+    mysqli_stmt_close($check_stmt);
 
     header("Location: profile.php");
     exit();
@@ -92,7 +97,9 @@ if (isset($_POST['submit_avatar']) && isset($_FILES['avatar']) && $_FILES['avata
 
     if (in_array($file['type'], $allowedTypes)) {
         $source = $file['tmp_name'];
-        $filename = basename($file['name']);
+        // Sanitize filename
+        $filename = preg_replace('/[^a-zA-Z0-9._-]/', '', basename($file['name']));
+        $filename = uniqid() . '_' . $filename; // Add unique prefix to prevent overwrites
         $target = __DIR__ . "/avatars/" . $filename;
         $path = "/Furnitures/user/avatars/" . $filename;
 
@@ -101,6 +108,7 @@ if (isset($_POST['submit_avatar']) && isset($_FILES['avatar']) && $_FILES['avata
             $stmt = mysqli_prepare($conn, $update_sql);
             mysqli_stmt_bind_param($stmt, 'si', $path, $userId);
             mysqli_stmt_execute($stmt);
+            mysqli_stmt_close($stmt);
 
             $_SESSION['success'] = 'Profile picture updated.';
         } else {
@@ -116,14 +124,14 @@ if (isset($_POST['submit_avatar']) && isset($_FILES['avatar']) && $_FILES['avata
 
 // Add new address
 if (isset($_POST['submit_address'])) {
-    $recipient = trim($_POST['recipient']);
-    $street    = trim($_POST['street']);
-    $barangay  = trim($_POST['barangay']);
-    $city      = trim($_POST['city']);
-    $province  = trim($_POST['province']);
-    $zipcode   = trim($_POST['zipcode']);
-    $country   = trim($_POST['country']);
-    $phone     = trim($_POST['phone']);
+    $recipient = htmlspecialchars(trim($_POST['recipient']), ENT_QUOTES, 'UTF-8');
+    $street    = htmlspecialchars(trim($_POST['street']), ENT_QUOTES, 'UTF-8');
+    $barangay  = htmlspecialchars(trim($_POST['barangay']), ENT_QUOTES, 'UTF-8');
+    $city      = htmlspecialchars(trim($_POST['city']), ENT_QUOTES, 'UTF-8');
+    $province  = htmlspecialchars(trim($_POST['province']), ENT_QUOTES, 'UTF-8');
+    $zipcode   = htmlspecialchars(trim($_POST['zipcode']), ENT_QUOTES, 'UTF-8');
+    $country   = htmlspecialchars(trim($_POST['country']), ENT_QUOTES, 'UTF-8');
+    $phone     = htmlspecialchars(trim($_POST['phone']), ENT_QUOTES, 'UTF-8');
 
     $sql = "INSERT INTO addresses 
             (recipient, street, barangay, city, province, zipcode, country, phone, user_id)
@@ -132,6 +140,7 @@ if (isset($_POST['submit_address'])) {
     mysqli_stmt_bind_param($stmt, 'ssssssssi', 
         $recipient, $street, $barangay, $city, $province, $zipcode, $country, $phone, $userId);
     mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
 
     $_SESSION['success'] = 'Address added successfully.';
     header("Location: profile.php");
@@ -142,33 +151,47 @@ if (isset($_POST['submit_address'])) {
 if (isset($_GET['delete_address'])) {
     $addressId = (int) $_GET['delete_address'];
 
-    // Check if this address is linked to any active orders (except received/cancelled/returned)
-    $check_sql = "
-        SELECT 1 
-        FROM orders 
-        WHERE address_id = ? 
-          AND user_id = ? 
-        LIMIT 1
-    ";
-    $check_stmt = mysqli_prepare($conn, $check_sql);
-    mysqli_stmt_bind_param($check_stmt, 'ii', $addressId, $userId);
-    mysqli_stmt_execute($check_stmt);
-    mysqli_stmt_store_result($check_stmt);
+    mysqli_begin_transaction($conn);
 
-    if (mysqli_stmt_num_rows($check_stmt) > 0) {
-        // Address is in use by active orders
-        $_SESSION['error'] = 'This address cannot be deleted because it is linked to your active and previous orders.';
-        header("Location: profile.php");
-        exit();
+    try {
+        // Check if this address is linked to any active orders
+        $check_sql = "
+            SELECT 1 
+            FROM orders 
+            WHERE address_id = ? 
+              AND user_id = ? 
+            LIMIT 1
+        ";
+        $check_stmt = mysqli_prepare($conn, $check_sql);
+        mysqli_stmt_bind_param($check_stmt, 'ii', $addressId, $userId);
+        mysqli_stmt_execute($check_stmt);
+        mysqli_stmt_store_result($check_stmt);
+
+        if (mysqli_stmt_num_rows($check_stmt) > 0) {
+            mysqli_stmt_close($check_stmt);
+            mysqli_rollback($conn);
+            
+            $_SESSION['error'] = 'This address cannot be deleted because it is linked to your active and previous orders.';
+            header("Location: profile.php");
+            exit();
+        }
+        mysqli_stmt_close($check_stmt);
+
+        // Safe to delete
+        $sql = "DELETE FROM addresses WHERE address_id = ? AND user_id = ?";
+        $stmt = mysqli_prepare($conn, $sql);
+        mysqli_stmt_bind_param($stmt, 'ii', $addressId, $userId);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+
+        mysqli_commit($conn);
+
+        $_SESSION['success'] = 'Address removed successfully.';
+    } catch (Exception $e) {
+        mysqli_rollback($conn);
+        $_SESSION['error'] = 'Failed to delete address.';
     }
 
-    // Safe to delete if only linked to received/cancelled/returned orders or unused
-    $sql = "DELETE FROM addresses WHERE address_id = ? AND user_id = ?";
-    $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, 'ii', $addressId, $userId);
-    mysqli_stmt_execute($stmt);
-
-    $_SESSION['success'] = 'Address removed successfully.';
     header("Location: profile.php");
     exit();
 }

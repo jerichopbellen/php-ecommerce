@@ -29,31 +29,48 @@ include '../../includes/adminHeader.php';
 include '../../includes/config.php';
 include '../../includes/alert.php';
 
-// ✅ Get selected tag filter
-$selectedTag = isset($_GET['tag']) ? intval($_GET['tag']) : 0;
+// ✅ Input sanitization for tag filter
+$selectedTag = isset($_GET['tag']) ? filter_var($_GET['tag'], FILTER_VALIDATE_INT) : 0;
+$selectedTag = ($selectedTag !== false && $selectedTag >= 0) ? $selectedTag : 0;
 
-// ✅ Fetch all tags for dropdown
-$tagsResult = mysqli_query($conn, "SELECT tag_id, name FROM tags ORDER BY name");
+// ✅ Fetch all tags for dropdown using prepared statement
+$tagsStmt = mysqli_prepare($conn, "SELECT tag_id, name FROM tags ORDER BY name");
+mysqli_stmt_execute($tagsStmt);
+$tagsResult = mysqli_stmt_get_result($tagsStmt);
 
-// ✅ Build query with optional tag filter
-$sql = "
-    SELECT 
-        pt.product_id,
-        pt.tag_id,
-        p.name AS product_name,
-        t.name AS tag_name
-    FROM product_tags pt
-    JOIN products p ON pt.product_id = p.product_id
-    JOIN tags t ON pt.tag_id = t.tag_id
-";
-
+// ✅ Build query with prepared statement for optional tag filter
 if ($selectedTag > 0) {
-    $sql .= " WHERE pt.tag_id = $selectedTag ";
+    $sql = "
+        SELECT 
+            pt.product_id,
+            pt.tag_id,
+            p.name AS product_name,
+            t.name AS tag_name
+        FROM product_tags pt
+        JOIN products p ON pt.product_id = p.product_id
+        JOIN tags t ON pt.tag_id = t.tag_id
+        WHERE pt.tag_id = ?
+        ORDER BY p.name, t.name
+    ";
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, "i", $selectedTag);
+} else {
+    $sql = "
+        SELECT 
+            pt.product_id,
+            pt.tag_id,
+            p.name AS product_name,
+            t.name AS tag_name
+        FROM product_tags pt
+        JOIN products p ON pt.product_id = p.product_id
+        JOIN tags t ON pt.tag_id = t.tag_id
+        ORDER BY p.name, t.name
+    ";
+    $stmt = mysqli_prepare($conn, $sql);
 }
 
-$sql .= " ORDER BY p.name, t.name";
-
-$result = mysqli_query($conn, $sql);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 $count = mysqli_num_rows($result);
 ?>
 
@@ -72,8 +89,8 @@ $count = mysqli_num_rows($result);
                 <select name="tag" class="form-select" onchange="this.form.submit()">
                     <option value="0">All Tags</option>
                     <?php while ($tag = mysqli_fetch_assoc($tagsResult)): ?>
-                        <option value="<?= $tag['tag_id'] ?>" <?= ($selectedTag == $tag['tag_id']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($tag['name']) ?>
+                        <option value="<?= intval($tag['tag_id']) ?>" <?=($selectedTag == $tag['tag_id']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($tag['name'], ENT_QUOTES, 'UTF-8') ?>
                         </option>
                     <?php endwhile; ?>
                 </select>
@@ -96,10 +113,10 @@ $count = mysqli_num_rows($result);
                     <tbody>
                         <?php while ($row = mysqli_fetch_assoc($result)) : ?>
                             <tr>
-                                <td><?= htmlspecialchars($row['product_name']) ?></td>
-                                <td><?= htmlspecialchars($row['tag_name']) ?></td>
+                                <td><?=htmlspecialchars($row['product_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?=htmlspecialchars($row['tag_name'], ENT_QUOTES, 'UTF-8') ?></td>
                                 <td class="text-center">
-                                    <a href="delete.php?product_id=<?= $row['product_id'] ?>&tag_id=<?= $row['tag_id'] ?>" class="btn btn-sm btn-outline-danger" title="Remove" onclick="return confirm('Remove this tag from product?');">
+                                    <a href="delete.php?product_id=<?= intval($row['product_id']) ?>&tag_id=<?= intval($row['tag_id']) ?>" class="btn btn-sm btn-outline-danger" title="Remove" onclick="return confirm('Remove this tag from product?');">
                                         <i class="bi bi-x-circle"></i>
                                     </a>
                                 </td>
@@ -117,4 +134,8 @@ $count = mysqli_num_rows($result);
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<?php 
+mysqli_stmt_close($stmt);
+mysqli_stmt_close($tagsStmt);
+include '../../includes/footer.php'; 
+?>

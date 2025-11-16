@@ -27,10 +27,19 @@ if ($_SESSION['role'] !== 'admin') {
 
 include '../../includes/adminHeader.php';
 include '../../includes/config.php';
+include '../../includes/alert.php';
 
-$id = intval($_GET['id']);
+// Input sanitization
+$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
-$user = mysqli_query($conn, "
+if ($id === false || $id === null) {
+    $_SESSION['flash'] = "Invalid user ID.";
+    header("Location: index.php");
+    exit;
+}
+
+// Prepared statement
+$stmt = mysqli_prepare($conn, "
     SELECT 
         user_id,
         email,
@@ -39,10 +48,21 @@ $user = mysqli_query($conn, "
         is_active,
         role
     FROM users
-    WHERE user_id = {$id}
+    WHERE user_id = ?
     LIMIT 1
 ");
-$user = mysqli_fetch_assoc($user);
+
+mysqli_stmt_bind_param($stmt, "i", $id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$user = mysqli_fetch_assoc($result);
+mysqli_stmt_close($stmt);
+
+if (!$user) {
+    $_SESSION['flash'] = "User not found.";
+    header("Location: index.php");
+    exit;
+}
 ?>
 
 <div class="container my-5">
@@ -70,12 +90,12 @@ $user = mysqli_fetch_assoc($user);
                         <div class="mb-4">
                             <label for="role" class="form-label">Role</label>
                             <select class="form-select" id="role" name="role" required>
-                                <option value="admin" <?= $user['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
-                                <option value="customer" <?= $user['role'] === 'customer' ? 'selected' : '' ?>>Customer</option>
+                                <option value="admin" <?=$user['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
+                                <option value="customer" <?=$user['role'] === 'customer' ? 'selected' : '' ?>>Customer</option>
                             </select>
                         </div>
 
-                        <input type="hidden" name="user_id" value="<?= $user['user_id'] ?>">
+                        <input type="hidden" name="user_id" value="<?= htmlspecialchars($user['user_id'], ENT_QUOTES) ?>">
 
                         <div class="d-flex justify-content-between">
                             <button type="submit" class="btn btn-primary">
@@ -92,4 +112,4 @@ $user = mysqli_fetch_assoc($user);
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<?php include '../../includes/footer.php'; ?>?>">

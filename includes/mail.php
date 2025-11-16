@@ -1,0 +1,47 @@
+<?php
+// PHPMailer manual includes
+require __DIR__ . '/phpmailer/src/PHPMailer.php';
+require __DIR__ . '/phpmailer/src/SMTP.php';
+require __DIR__ . '/phpmailer/src/Exception.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+// Mailtrap SMTP config
+$mailConfig = [
+    'host' => 'sandbox.smtp.mailtrap.io',
+    'port' =>  2525,
+    'username' => 'fb6313869eb3e1',
+    'password' => '467e529f2bd258',
+    'from_email' => 'no-reply@furnitureshop.com',
+    'from_name' => 'Furniture Shop'
+];
+
+function sendMail(string $toEmail, string $toName, string $subject, string $bodyHtml, array $mailConfig): bool {
+    $mail = new PHPMailer(true);
+    try {
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host       = $mailConfig['host'];
+        $mail->SMTPAuth   = true;
+        $mail->Username   = $mailConfig['username'];
+        $mail->Password   = $mailConfig['password'];
+        $mail->Port       = $mailConfig['port'];
+
+        // Recipients
+        $mail->setFrom($mailConfig['from_email'], $mailConfig['from_name']);
+        $mail->addAddress($toEmail, $toName);
+
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body    = $bodyHtml;
+        $mail->AltBody = strip_tags($bodyHtml);
+
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log('Mail error: ' . $mail->ErrorInfo);
+        return false;
+    }
+}

@@ -9,29 +9,56 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 
 include '../../includes/config.php';
 
-$_SESSION['name'] = trim($_POST['name']);
-
 if (isset($_POST['submit'])) {
-    $name =  trim($_POST['name']);
-
-     // Check if brand name already exists
-    $check_sql = "SELECT brand_id FROM brands WHERE name = '{$name}'";
-    $check_result = mysqli_query($conn, $check_sql);
+    // Input sanitization
+    $name = trim($_POST['name']);
+    $name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
     
-    if (mysqli_num_rows($check_result) > 0) {
-        $_SESSION['error'] = "Brand name already exists.";
-        header("Location: index.php");
+    // Validate input
+    if (empty($name)) {
+        $_SESSION['error'] = "Brand name cannot be empty.";
+        header("Location: create.php");
         exit;
     }
-
-    $sql = "INSERT INTO brands (name) VALUES('{$name}')";
-    $result = mysqli_query($conn, $sql);
-
-    if($result) {
-        $_SESSION['success'] = "Brand added successfully.";
-        header("Location: index.php");
-        exit;
-    }else {
+    
+    // Start transaction
+    mysqli_begin_transaction($conn);
+    
+    try {
+        // Check if brand name already exists using prepared statement
+        $check_sql = "SELECT brand_id FROM brands WHERE name = ?";
+        $check_stmt = mysqli_prepare($conn, $check_sql);
+        mysqli_stmt_bind_param($check_stmt, "s", $name);
+        mysqli_stmt_execute($check_stmt);
+        $check_result = mysqli_stmt_get_result($check_stmt);
+        
+        if (mysqli_num_rows($check_result) > 0) {
+            mysqli_stmt_close($check_stmt);
+            mysqli_rollback($conn);
+            $_SESSION['error'] = "Brand name already exists.";
+            header("Location: create.php");
+            exit;
+        }
+        mysqli_stmt_close($check_stmt);
+        
+        // Insert brand using prepared statement
+        $sql = "INSERT INTO brands (name) VALUES (?)";
+        $stmt = mysqli_prepare($conn, $sql);
+        mysqli_stmt_bind_param($stmt, "s", $name);
+        $result = mysqli_stmt_execute($stmt);
+        
+        if ($result) {
+            mysqli_commit($conn);
+            mysqli_stmt_close($stmt);
+            $_SESSION['success'] = "Brand added successfully.";
+            header("Location: index.php");
+            exit;
+        } else {
+            throw new Exception("Failed to insert brand");
+        }
+        
+    } catch (Exception $e) {
+        mysqli_rollback($conn);
         $_SESSION['error'] = "Failed to add brand. Please try again.";
         header("Location: create.php");
         exit;

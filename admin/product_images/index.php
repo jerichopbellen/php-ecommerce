@@ -29,9 +29,10 @@ include '../../includes/adminHeader.php';
 include '../../includes/config.php';
 include '../../includes/alert.php';
 
-$keyword = isset($_GET['search']) ? strtolower(trim($_GET['search'])) : '';
-$keyword = mysqli_real_escape_string($conn, $keyword);
+// Input sanitization
+$keyword = isset($_GET['search']) ? trim($_GET['search']) : '';
 
+// Prepare SQL statement
 $sql = "
     SELECT 
         i.image_id AS image_id,
@@ -42,13 +43,26 @@ $sql = "
     INNER JOIN products p ON i.product_id = p.product_id
 ";
 
-if ($keyword) {
-    $sql .= " WHERE LOWER(p.name) LIKE '%$keyword%'";
+if ($keyword !== '') {
+    $sql .= " WHERE LOWER(p.name) LIKE LOWER(?)";
 }
 
 $sql .= " ORDER BY p.name ASC";
 
-$result = mysqli_query($conn, $sql);
+// Execute prepared statement
+$stmt = mysqli_prepare($conn, $sql);
+
+if ($stmt === false) {
+    die("Error preparing statement: " . mysqli_error($conn));
+}
+
+if ($keyword !== '') {
+    $searchParam = "%$keyword%";
+    mysqli_stmt_bind_param($stmt, "s", $searchParam);
+}
+
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 $itemCount = mysqli_num_rows($result);
 ?>
 
@@ -71,7 +85,7 @@ $itemCount = mysqli_num_rows($result);
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <h5 class="card-title mb-3">Total Images: <?= $itemCount ?></h5>
+            <h5 class="card-title mb-3">Total Images: <?=$itemCount ?></h5>
             <div class="table-responsive">
                 <table class="table table-hover align-middle table-bordered">
                     <thead class="table-light">
@@ -91,10 +105,10 @@ $itemCount = mysqli_num_rows($result);
                                 <td><?= htmlspecialchars($row['product_name']) ?></td>
                                 <td><?= htmlspecialchars($row['alt_text']) ?></td>
                                 <td class="text-center">
-                                    <a href="edit.php?id=<?= $row['image_id'] ?>" class="text-primary me-2" title="Edit">
+                                    <a href="edit.php?id=<?= urlencode($row['image_id']) ?>" class="text-primary me-2" title="Edit">
                                         <i class="fa-regular fa-pen-to-square"></i>
                                     </a>
-                                    <a href="delete.php?id=<?= $row['image_id'] ?>" class="text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this image?')">
+                                    <a href="delete.php?id=<?= urlencode($row['image_id']) ?>" class="text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this image?')">
                                         <i class="fa-solid fa-trash"></i>
                                     </a>
                                 </td>
@@ -112,4 +126,7 @@ $itemCount = mysqli_num_rows($result);
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<?php 
+mysqli_stmt_close($stmt);
+include '../../includes/footer.php'; 
+?>

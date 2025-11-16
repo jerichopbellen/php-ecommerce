@@ -9,11 +9,21 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $user_id    = $_SESSION['user_id'];
-$product_id = intval($_POST['product_id']);
-$order_id   = intval($_POST['order_id']);
-$variant_id = intval($_POST['variant_id']);
-$rating     = intval($_POST['rating']);
-$comment    = trim($_POST['comment']);
+$product_id = filter_input(INPUT_POST, 'product_id', FILTER_VALIDATE_INT);
+$order_id   = filter_input(INPUT_POST, 'order_id', FILTER_VALIDATE_INT);
+$variant_id = filter_input(INPUT_POST, 'variant_id', FILTER_VALIDATE_INT);
+$rating     = filter_input(INPUT_POST, 'rating', FILTER_VALIDATE_INT);
+$comment    = isset($_POST['comment']) ? trim($_POST['comment']) : '';
+
+// Validate inputs
+if (!$product_id || !$order_id || !$variant_id || !$rating || $rating < 1 || $rating > 5) {
+    $_SESSION['error'] = "Invalid input data.";
+    header("Location: order_history.php");
+    exit;
+}
+
+// Sanitize comment
+$comment = htmlspecialchars($comment, ENT_QUOTES, 'UTF-8');
 
 //Define foul words list
 $badWords = [
@@ -29,13 +39,47 @@ foreach ($badWords as $word) {
     }, $comment);
 }
 
-$stmt = mysqli_prepare($conn, "
-    INSERT INTO reviews (user_id, product_id, variant_id, rating, comment)
-    VALUES (?, ?, ?, ?, ?)
-");
-mysqli_stmt_bind_param($stmt, "iiiis", $user_id, $product_id, $variant_id, $rating, $comment);
-mysqli_stmt_execute($stmt);
+// Start transaction
+mysqli_begin_transaction($conn);
 
-$_SESSION['success'] = "Thank you! Your review has been submitted.";
-header("Location: order_history.php");
-exit;
+try {
+    // Verify user owns this order
+    $verify_stmt = mysqli_prepare($conn, "
+        SELECT id FROM orders 
+        WHERE id = ? AND user_id = ? AND order_status = 'Completed'
+    ");
+    mysqli_stmt_bind_param($verify_stmt, "ii", $order_id, $user_id);
+    mysqli_stmt_execute($verify_stmt);
+    $verify_result = mysqli_stmt_get_result($verify_stmt);
+    
+    if (mysqli_num_rows($verify_result) === 0) {
+        throw new Exception("Invalid order or order not completed.");
+    }
+    mysqli_stmt_close($verify_stmt);
+
+    // Insert review
+    $stmt = mysqli_prepare($conn, "
+        INSERT INTO reviews (user_id, product_id, variant_id, rating, comment)
+        VALUES (?, ?, ?, ?, ?)
+    ");
+    mysqli_stmt_bind_param($stmt, "iiiis", $user_id, $product_id, $variant_id, $rating, $comment);
+    
+    if (!mysqli_stmt_execute($stmt)) {
+        throw new Exception("Failed to submit review.");
+    }
+    mysqli_stmt_close($stmt);
+
+    // Commit transaction
+    mysqli_commit($conn);
+    
+    $_SESSION['success'] = "Thank you! Your review has been submitted.";
+    header("Location: order_history.php");
+    exit;
+
+} catch (Exception $e) {
+    // Rollback on error
+    mysqli_rollback($conn);
+    $_SESSION['error'] = $e->getMessage();
+    header("Location: order_history.php");
+    exit;
+}

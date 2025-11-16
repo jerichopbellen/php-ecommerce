@@ -57,12 +57,12 @@ $result = mysqli_stmt_get_result($stmt);
                         $total = 0;
 
                         while ($row = mysqli_fetch_assoc($result)) {
-                            $cart_item_id = $row['cart_item_id'];
-                            $product_name = htmlspecialchars($row['product_name']);
-                            $product_id = (int)$row['product_id'];
-                            $current_variant_id = (int)$row['variant_id'];
-                            $price = (float)$row['variant_price'];
-                            $qty = max(1, (int)$row['quantity']);
+                            $cart_item_id = intval($row['cart_item_id']);
+                            $product_name = htmlspecialchars($row['product_name'], ENT_QUOTES, 'UTF-8');
+                            $product_id = intval($row['product_id']);
+                            $current_variant_id = intval($row['variant_id']);
+                            $price = floatval($row['variant_price']);
+                            $qty = max(1, intval($row['quantity']));
                             $subtotal = $price * $qty;
                             $total += $subtotal;
 
@@ -73,7 +73,7 @@ $result = mysqli_stmt_get_result($stmt);
                             mysqli_stmt_execute($stock_stmt);
                             $stock_result = mysqli_stmt_get_result($stock_stmt);
                             $stock_row = mysqli_fetch_assoc($stock_result);
-                            $current_stock = isset($stock_row['quantity']) ? (int)$stock_row['quantity'] : 0;
+                            $current_stock = isset($stock_row['quantity']) ? intval($stock_row['quantity']) : 0;
                             mysqli_stmt_close($stock_stmt);
 
                             $exceeds_stock = $qty > $current_stock;
@@ -90,16 +90,16 @@ $result = mysqli_stmt_get_result($stmt);
 
                             $variant_dropdown = "<select name='variant_id[$cart_item_id]' class='form-select text-center'>";
                             while ($variant = mysqli_fetch_assoc($variant_result)) {
-                                $vid = (int)$variant['variant_id'];
+                                $vid = intval($variant['variant_id']);
                                 $color = trim($variant['color']);
                                 $material = trim($variant['material']);
                                 
                                 if ($color && $material) {
-                                    $label = htmlspecialchars("$color / $material");
+                                    $label = htmlspecialchars("$color / $material", ENT_QUOTES, 'UTF-8');
                                 } elseif ($color) {
-                                    $label = htmlspecialchars($color);
+                                    $label = htmlspecialchars($color, ENT_QUOTES, 'UTF-8');
                                 } elseif ($material) {
-                                    $label = htmlspecialchars($material);
+                                    $label = htmlspecialchars($material, ENT_QUOTES, 'UTF-8');
                                 } else {
                                     $label = "N/A";
                                 }
@@ -150,10 +150,11 @@ $result = mysqli_stmt_get_result($stmt);
 
                             mysqli_stmt_close($variant_stmt);
                         }
+                        mysqli_stmt_close($stmt);
                         ?>
                         <tr class="table-secondary">
                             <td colspan="6" class="text-end">
-                                <strong>Total: ₱<?= number_format($total, 2) ?></strong>
+                                <strong>Total: ₱<?=number_format($total, 2) ?></strong>
                             </td>
                         </tr>
                         <tr>

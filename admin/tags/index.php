@@ -29,16 +29,23 @@ include '../../includes/adminHeader.php';
 include '../../includes/config.php';
 include '../../includes/alert.php';
 
+// Input sanitization
 $keyword = isset($_GET['search']) ? trim($_GET['search']) : '';
-$keywordEscaped = mysqli_real_escape_string($conn, $keyword);
+$keyword = filter_var($keyword, FILTER_SANITIZE_STRING);
 
-$sql = "SELECT * FROM tags";
-if ($keyword) {
-    $sql .= " WHERE name LIKE '%$keywordEscaped%'";
+// Prepared statement for SELECT query
+if ($keyword !== '' && $keyword !== false) {
+    $sql = "SELECT * FROM tags WHERE name LIKE ? ORDER BY name ASC";
+    $stmt = mysqli_prepare($conn, $sql);
+    $searchParam = "%$keyword%";
+    mysqli_stmt_bind_param($stmt, "s", $searchParam);
+} else {
+    $sql = "SELECT * FROM tags ORDER BY name ASC";
+    $stmt = mysqli_prepare($conn, $sql);
 }
-$sql .= " ORDER BY name ASC";
 
-$result = mysqli_query($conn, $sql);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 $count = mysqli_num_rows($result);
 ?>
 
@@ -52,7 +59,7 @@ $count = mysqli_num_rows($result);
 
     <form method="GET" class="mb-4">
         <div class="input-group">
-            <input type="text" name="search" class="form-control" placeholder="Search tags..." value="<?= htmlspecialchars($keyword) ?>">
+            <input type="text" name="search" class="form-control" placeholder="Search tags..." value="<?=htmlspecialchars($keyword) ?>">
             <button class="btn btn-outline-secondary" type="submit">
                 <i class="bi bi-search"></i>
             </button>
@@ -61,7 +68,7 @@ $count = mysqli_num_rows($result);
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <h5 class="card-title mb-3">Total Tags: <?= $count ?></h5>
+            <h5 class="card-title mb-3">Total Tags: <?=$count ?></h5>
             <div class="table-responsive">
                 <table class="table table-hover align-middle table-bordered">
                     <thead class="table-light">
@@ -75,10 +82,10 @@ $count = mysqli_num_rows($result);
                             <tr>
                                 <td><?= htmlspecialchars($row['name']) ?></td>
                                 <td class="text-center">
-                                    <a href="edit.php?id=<?= $row['tag_id'] ?>" class="btn btn-sm btn-outline-primary me-1" title="Edit">
+                                    <a href="edit.php?id=<?=(int)$row['tag_id'] ?>" class="btn btn-sm btn-outline-primary me-1" title="Edit">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
-                                    <a href="delete.php?id=<?= $row['tag_id'] ?>" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm('Delete this tag?');">
+                                    <a href="delete.php?id=<?= (int)$row['tag_id'] ?>" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm('Delete this tag?');">
                                         <i class="bi bi-trash"></i>
                                     </a>
                                 </td>
@@ -86,7 +93,7 @@ $count = mysqli_num_rows($result);
                         <?php endwhile; ?>
                         <?php if ($count === 0): ?>
                             <tr>
-                                <td colspan="4" class="text-center text-muted">No tags found.</td>
+                                <td colspan="2" class="text-center text-muted">No tags found.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -96,4 +103,7 @@ $count = mysqli_num_rows($result);
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<?php 
+mysqli_stmt_close($stmt);
+include '../../includes/footer.php'; 
+?>

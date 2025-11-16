@@ -8,12 +8,20 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 
 include '../../includes/config.php';
 include '../../includes/adminHeader.php';
+include '../../includes/alert.php';
 
-// ✅ Get selected filter
-$replyFilter = $_GET['reply'] ?? 'all';
+// ✅ Input sanitization for filter parameter
+$replyFilter = isset($_GET['reply']) ? trim($_GET['reply']) : 'all';
+// Whitelist allowed values
+$allowedFilters = ['all', 'replied', 'notyet'];
+if (!in_array($replyFilter, $allowedFilters)) {
+    $replyFilter = 'all';
+}
 
-// ✅ Build query with optional filter
+// ✅ Build query with prepared statement
 $sql = "SELECT * FROM contact_messages";
+$types = "";
+$params = [];
 
 if ($replyFilter === 'replied') {
     $sql .= " WHERE reply IS NOT NULL AND reply <> ''";
@@ -23,7 +31,14 @@ if ($replyFilter === 'replied') {
 
 $sql .= " ORDER BY submitted_at DESC";
 
-$result = mysqli_query($conn, $sql);
+// ✅ Use prepared statement
+$stmt = mysqli_prepare($conn, $sql);
+if (!$stmt) {
+    die("Error preparing statement: " . mysqli_error($conn));
+}
+
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 $count = mysqli_num_rows($result);
 ?>
 
@@ -63,19 +78,20 @@ $count = mysqli_num_rows($result);
                     <tbody>
                         <?php while ($row = mysqli_fetch_assoc($result)): ?>
                             <tr>
-                                <td><?= htmlspecialchars($row['name']) ?></td>
-                                <td><?= htmlspecialchars($row['email']) ?></td>
-                                <td><?= htmlspecialchars($row['subject']) ?></td>
-                                <td><?= nl2br(htmlspecialchars($row['message'])) ?></td>
-                                <td><?= date('Y-m-d H:i', strtotime($row['submitted_at'])) ?></td>
+                                <td><?=htmlspecialchars($row['name']) ?></td>
+                                <td><?=htmlspecialchars($row['email']) ?></td>
+                                <td><?=htmlspecialchars($row['subject']) ?></td>
+                                <td><?=nl2br(htmlspecialchars($row['message'])) ?></td>
+                                <td><?=date('Y-m-d H:i', strtotime($row['submitted_at'])) ?></td>
                                 <td>
                                     <?php if ($row['reply']): ?>
-                                        <div class="text-success mb-2"><?= nl2br(htmlspecialchars($row['reply'])) ?></div>
-                                        <small class="text-muted">Replied: <?= date('Y-m-d H:i', strtotime($row['replied_at'])) ?></small>
+                                        <div class="text-success mb-2"><?=nl2br(htmlspecialchars($row['reply'])) ?></div>
+                                        <small class="text-muted">Replied: <?=date('Y-m-d H:i', strtotime($row['replied_at'])) ?></small>
                                     <?php else: ?>
                                         <form action="reply_contact.php" method="POST">
                                             <textarea name="reply" class="form-control mb-2" rows="3" required></textarea>
-                                            <input type="hidden" name="id" value="<?= $row['id'] ?>">
+                                            <!-- ✅ ID sanitization -->
+                                            <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-primary">Send Reply</button>
                                         </form>
                                     <?php endif; ?>
@@ -94,4 +110,7 @@ $count = mysqli_num_rows($result);
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<?php 
+mysqli_stmt_close($stmt);
+include '../../includes/footer.php'; 
+?>

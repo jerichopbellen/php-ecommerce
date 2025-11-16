@@ -27,6 +27,13 @@ if ($_SESSION['role'] !== 'admin') {
 
 include '../../includes/adminHeader.php';
 include '../../includes/config.php';
+include '../../includes/alert.php';
+
+// Sanitize any GET parameters if they exist (for pre-filling form on error)
+$name = '';
+if (isset($_GET['name'])) {
+    $name = htmlspecialchars(trim($_GET['name']), ENT_QUOTES, 'UTF-8');
+}
 ?>
 
 <div class="container my-5">
@@ -38,7 +45,11 @@ include '../../includes/config.php';
                     <form method="POST" action="store.php" enctype="multipart/form-data">
                         <div class="mb-3">
                             <label for="name" class="form-label">Category Name</label>
-                            <input type="text" class="form-control" id="name" name="name" placeholder="Enter category name" required>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   placeholder="Enter category name" 
+                                   value="<?php echo $name; ?>" 
+                                   required 
+                                   maxlength="255">
                         </div>
 
                         <div class="d-flex justify-content-between">

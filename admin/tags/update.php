@@ -9,23 +9,56 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 
 include '../../includes/config.php';
 
-$tag_id = intval($_POST['tag_id']);
-$name = trim($_POST['name']);
-$nameEscaped = mysqli_real_escape_string($conn, $name);
+// Input sanitization
+$tag_id = filter_input(INPUT_POST, 'tag_id', FILTER_VALIDATE_INT);
+$name = trim($_POST['name'] ?? '');
 
-$check_sql = "SELECT tag_id FROM tags WHERE name = '{$name}'";
-$check_result = mysqli_query($conn, $check_sql);
-    
-if (mysqli_num_rows($check_result) > 0) {
-    $_SESSION['error'] = "Tag name already exists.";
+// Validate inputs
+if (!$tag_id || empty($name)) {
+    $_SESSION['error'] = "Invalid input data.";
     header("Location: index.php");
     exit;
 }
 
-if ($tag_id && $nameEscaped) {
-    mysqli_query($conn, "UPDATE tags SET name = '$nameEscaped' WHERE tag_id = $tag_id");
-}
+// Start transaction
+mysqli_begin_transaction($conn);
 
-$_SESSION['success'] = "Tag updated successfully.";
-header("Location: index.php");
-exit;
+try {
+    // Check if tag name already exists (excluding current tag)
+    $check_stmt = mysqli_prepare($conn, "SELECT tag_id FROM tags WHERE name = ? AND tag_id != ?");
+    mysqli_stmt_bind_param($check_stmt, "si", $name, $tag_id);
+    mysqli_stmt_execute($check_stmt);
+    mysqli_stmt_store_result($check_stmt);
+    
+    if (mysqli_stmt_num_rows($check_stmt) > 0) {
+        mysqli_stmt_close($check_stmt);
+        throw new Exception("Tag name already exists.");
+    }
+    mysqli_stmt_close($check_stmt);
+    
+    // Update tag using prepared statement
+    $update_stmt = mysqli_prepare($conn, "UPDATE tags SET name = ? WHERE tag_id = ?");
+    mysqli_stmt_bind_param($update_stmt, "si", $name, $tag_id);
+    
+    if (!mysqli_stmt_execute($update_stmt)) {
+        mysqli_stmt_close($update_stmt);
+        throw new Exception("Failed to update tag.");
+    }
+    
+    mysqli_stmt_close($update_stmt);
+    
+    // Commit transaction
+    mysqli_commit($conn);
+    
+    $_SESSION['success'] = "Tag updated successfully.";
+    header("Location: index.php");
+    exit;
+    
+} catch (Exception $e) {
+    // Rollback on error
+    mysqli_rollback($conn);
+    
+    $_SESSION['error'] = $e->getMessage();
+    header("Location: edit.php?id=$tag_id");
+    exit;
+}

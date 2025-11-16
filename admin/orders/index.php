@@ -27,13 +27,19 @@ if ($_SESSION['role'] !== 'admin') {
 
 include '../../includes/adminHeader.php';
 include '../../includes/config.php';
+include '../../includes/alert.php';
 
-$keyword = isset($_GET['search']) ? strtolower(trim($_GET['search'])) : '';
+// Input sanitization
+$keyword = isset($_GET['search']) ? trim($_GET['search']) : '';
 $statusFilter = isset($_GET['status']) ? strtolower(trim($_GET['status'])) : '';
 
-$keyword = mysqli_real_escape_string($conn, $keyword);
-$statusFilter = mysqli_real_escape_string($conn, $statusFilter);
+// Whitelist validation for status
+$allowedStatuses = ['pending', 'processing', 'shipped', 'delivered', 'received', 'cancelled'];
+if ($statusFilter && !in_array($statusFilter, $allowedStatuses)) {
+    $statusFilter = '';
+}
 
+// Build query with prepared statement
 $sql = "
     SELECT 
         order_id,
@@ -48,19 +54,45 @@ $sql = "
 ";
 
 $conditions = [];
-if ($keyword) {
-    $conditions[] = "(customer_name LIKE '%$keyword%' OR customer_email LIKE '%$keyword%' OR status LIKE '%$keyword%' OR tracking_number LIKE '%$keyword%' OR order_id LIKE '%$keyword%')";
+$params = [];
+$types = '';
+
+if ($keyword !== '') {
+    $conditions[] = "(customer_name LIKE ? OR customer_email LIKE ? OR status LIKE ? OR tracking_number LIKE ? OR order_id LIKE ?)";
+    $likeKeyword = "%$keyword%";
+    $params[] = &$likeKeyword;
+    $params[] = &$likeKeyword;
+    $params[] = &$likeKeyword;
+    $params[] = &$likeKeyword;
+    $params[] = &$likeKeyword;
+    $types .= 'sssss';
 }
-if ($statusFilter && in_array($statusFilter, ['pending', 'processing', 'shipped', 'delivered', 'received', 'cancelled'])) {
-    $conditions[] = "status = '$statusFilter'";
+
+if ($statusFilter !== '') {
+    $conditions[] = "status = ?";
+    $params[] = &$statusFilter;
+    $types .= 's';
 }
+
 if ($conditions) {
     $sql .= " WHERE " . implode(" AND ", $conditions);
 }
 
 $sql .= " GROUP BY order_id ORDER BY created_at DESC";
 
-$result = mysqli_query($conn, $sql);
+// Prepare and execute statement
+$stmt = mysqli_prepare($conn, $sql);
+if ($stmt === false) {
+    die("Error preparing statement: " . mysqli_error($conn));
+}
+
+if (!empty($params)) {
+    array_unshift($params, $types);
+    call_user_func_array([$stmt, 'bind_param'], $params);
+}
+
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 $itemCount = mysqli_num_rows($result);
 ?>
 
@@ -72,17 +104,16 @@ $itemCount = mysqli_num_rows($result);
     <form method="GET" class="row g-3 align-items-end mb-4">
         <div class="col-md-6">
             <label for="search" class="form-label">Search</label>
-            <input type="text" name="search" id="search" class="form-control" placeholder="Customer, email, status, tracking #, or ID..." value="<?= htmlspecialchars($keyword) ?>">
+            <input type="text" name="search" id="search" class="form-control" placeholder="Customer, email, status, tracking #, or ID..." value="<?=htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8') ?>">
         </div>
         <div class="col-md-3">
             <label for="status" class="form-label">Filter by Status</label>
             <select name="status" id="status" class="form-select">
                 <option value="">All</option>
                 <?php
-                $statuses = ['pending', 'processing', 'shipped', 'delivered', 'received', 'cancelled'];
-                foreach ($statuses as $status) {
+                foreach ($allowedStatuses as $status) {
                     $selected = $statusFilter === $status ? 'selected' : '';
-                    echo "<option value='$status' $selected>" . ucfirst($status) . "</option>";
+                    echo "<option value='" . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . "' $selected>" . htmlspecialchars(ucfirst($status), ENT_QUOTES, 'UTF-8') . "</option>";
                 }
                 ?>
             </select>
@@ -96,7 +127,7 @@ $itemCount = mysqli_num_rows($result);
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <h5 class="card-title mb-3">Total Orders: <?= $itemCount ?></h5>
+            <h5 class="card-title mb-3">Total Orders: <?=$itemCount ?></h5>
             <div class="table-responsive">
                 <table class="table table-hover align-middle table-bordered">
                     <thead class="table-light">
@@ -114,8 +145,8 @@ $itemCount = mysqli_num_rows($result);
                     <tbody>
                         <?php while ($row = mysqli_fetch_assoc($result)) : ?>
                             <tr>
-                                <td>#<?= $row['order_id'] ?></td>
-                                <td><?= date('Y-m-d H:i', strtotime($row['created_at'])) ?></td>
+                                <td>#<?=htmlspecialchars($row['order_id'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?=htmlspecialchars(date('Y-m-d H:i', strtotime($row['created_at'])), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td>
                                     <?php
                                         $status = strtolower($row['status']);
@@ -128,15 +159,15 @@ $itemCount = mysqli_num_rows($result);
                                             'cancelled'  => 'danger',
                                             default      => 'dark text-white'
                                         };
-                                        echo "<span class='badge bg-$badge text-capitalize'>$status</span>";
+                                        echo "<span class='badge bg-" . htmlspecialchars($badge, ENT_QUOTES, 'UTF-8') . " text-capitalize'>" . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . "</span>";
                                     ?>
                                 </td>
-                                <td><?= htmlspecialchars($row['tracking_number'] ?? '-') ?></td>
-                                <td><?= htmlspecialchars($row['customer_name']) ?></td>
-                                <td><?= htmlspecialchars($row['customer_email']) ?></td>
-                                <td>₱<?= number_format($row['total_amount'], 2) ?></td>
+                                <td><?=htmlspecialchars($row['tracking_number'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?=htmlspecialchars($row['customer_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?=htmlspecialchars($row['customer_email'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td>₱<?=number_format($row['total_amount'], 2) ?></td>
                                 <td class="text-center">
-                                    <a href="view.php?id=<?= $row['order_id'] ?>" class="btn btn-sm btn-outline-secondary me-1" title="View">
+                                    <a href="view.php?id=<?= urlencode($row['order_id']) ?>" class="btn btn-sm btn-outline-secondary me-1" title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 </td>
@@ -154,4 +185,7 @@ $itemCount = mysqli_num_rows($result);
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<?php 
+mysqli_stmt_close($stmt);
+include '../../includes/footer.php'; 
+?>ew">/td>/td>/td>/td>

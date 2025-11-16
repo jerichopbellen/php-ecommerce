@@ -29,11 +29,17 @@ include '../../includes/adminHeader.php';
 include '../../includes/config.php';
 include '../../includes/alert.php';
 
-$keyword = isset($_GET['search']) ? strtolower(trim($_GET['search'])) : '';
-$keyword = mysqli_real_escape_string($conn, $keyword);
+// Input sanitization
+$keyword = isset($_GET['search']) ? trim($_GET['search']) : '';
+$statusFilter = isset($_GET['status']) ? trim($_GET['status']) : 'active';
 
-$statusFilter = $_GET['status'] ?? 'active';
+// Validate status filter (whitelist approach)
+$allowedStatuses = ['all', 'active', 'deactivated', 'deleted'];
+if (!in_array($statusFilter, $allowedStatuses)) {
+    $statusFilter = 'active';
+}
 
+// Build query with prepared statement
 $sql = "
     SELECT 
         user_id,
@@ -44,29 +50,46 @@ $sql = "
         is_deleted,
         role
     FROM users
-    WHERE 1
+    WHERE 1=1
 ";
 
+$params = [];
+$types = '';
+
 // Apply keyword filter
-if ($keyword) {
+if ($keyword !== '') {
     $sql .= " AND (
-        email LIKE '%$keyword%'  
-        OR first_name LIKE '%$keyword%'  
-        OR last_name LIKE '%$keyword%'  
-        OR role LIKE '%$keyword%'
+        email LIKE ? 
+        OR first_name LIKE ? 
+        OR last_name LIKE ? 
+        OR role LIKE ?
     )";
+    $searchParam = '%' . $keyword . '%';
+    $params[] = $searchParam;
+    $params[] = $searchParam;
+    $params[] = $searchParam;
+    $params[] = $searchParam;
+    $types .= 'ssss';
 }
 
 // Apply status filter
 switch ($statusFilter) {
     case 'active':
-        $sql .= " AND is_active = 1 AND is_deleted = 0";
+        $sql .= " AND is_active = ? AND is_deleted = ?";
+        $params[] = 1;
+        $params[] = 0;
+        $types .= 'ii';
         break;
     case 'deactivated':
-        $sql .= " AND is_active = 0 AND is_deleted = 0";
+        $sql .= " AND is_active = ? AND is_deleted = ?";
+        $params[] = 0;
+        $params[] = 0;
+        $types .= 'ii';
         break;
     case 'deleted':
-        $sql .= " AND is_deleted = 1";
+        $sql .= " AND is_deleted = ?";
+        $params[] = 1;
+        $types .= 'i';
         break;
     case 'all':
     default:
@@ -76,7 +99,18 @@ switch ($statusFilter) {
 
 $sql .= " ORDER BY user_id ASC";
 
-$result = mysqli_query($conn, $sql);
+// Execute prepared statement
+$stmt = mysqli_prepare($conn, $sql);
+if ($stmt === false) {
+    die("Error preparing statement: " . mysqli_error($conn));
+}
+
+if (!empty($params)) {
+    mysqli_stmt_bind_param($stmt, $types, ...$params);
+}
+
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 $itemCount = mysqli_num_rows($result);
 ?>
 
@@ -88,7 +122,7 @@ $itemCount = mysqli_num_rows($result);
     <form method="GET" class="mb-4">
         <div class="row g-2">
             <div class="col-md-8">
-                <input type="text" name="search" class="form-control" placeholder="Search by name, email, or role..." value="<?= htmlspecialchars($keyword) ?>">
+                <input type="text" name="search" class="form-control" placeholder="Search by name, email, or role..." value="<?=htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8') ?>">
             </div>
             <div class="col-md-3">
                 <select name="status" class="form-select">
@@ -101,7 +135,7 @@ $itemCount = mysqli_num_rows($result);
                     ];
                     foreach ($statusOptions as $key => $label) {
                         $selected = ($statusFilter === $key) ? 'selected' : '';
-                        echo "<option value='$key' $selected>$label</option>";
+                        echo "<option value='" . htmlspecialchars($key, ENT_QUOTES, 'UTF-8') . "' $selected>" . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . "</option>";
                     }
                     ?>
                 </select>
@@ -133,11 +167,11 @@ $itemCount = mysqli_num_rows($result);
                     <tbody>
                         <?php while ($row = mysqli_fetch_assoc($result)) : ?>
                             <tr>
-                                <td><?= $row['user_id'] ?></td>
-                                <td><?= htmlspecialchars($row['email']) ?></td>
-                                <td><?= htmlspecialchars($row['first_name']) ?></td>
-                                <td><?= htmlspecialchars($row['last_name']) ?></td>
-                                <td><?= htmlspecialchars($row['role']) ?></td>
+                                <td><?=htmlspecialchars($row['user_id'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?=htmlspecialchars($row['email'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?=htmlspecialchars($row['first_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?=htmlspecialchars($row['last_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?=htmlspecialchars($row['role'], ENT_QUOTES, 'UTF-8') ?></td>
                                 <td>
                                     <?php
                                         if ($row['is_deleted'] == 1) {
@@ -156,22 +190,22 @@ $itemCount = mysqli_num_rows($result);
                                             <i class="fa-solid fa-user-slash text-muted opacity-50" title="Deactivate"></i>
                                             <i class="fa-solid fa-trash text-muted opacity-50" title="Delete"></i>
                                         <?php else: ?>
-                                            <a href="edit.php?id=<?= $row['user_id'] ?>" title="Edit">
+                                            <a href="edit.php?id=<?=urlencode($row['user_id']) ?>" title="Edit">
                                                 <i class="fa-regular fa-pen-to-square text-primary"></i>
                                             </a>
                                             <?php if ($row['is_active'] == 0): ?>
-                                                <a href="reactivate.php?id=<?= $row['user_id'] ?>" title="Reactivate" onclick="return confirm('Are you sure you want to reactivate this user?');">
+                                                <a href="reactivate.php?id=<?= urlencode($row['user_id']) ?>" title="Reactivate" onclick="return confirm('Are you sure you want to reactivate this user?');">
                                                     <i class="fa-solid fa-user-check text-success"></i>
                                                 </a>
                                             <?php else: ?>
-                                                <a href="deactivate.php?id=<?= $row['user_id'] ?>" title="Deactivate" onclick="return confirm('Are you sure you want to deactivate this user?');">
+                                                <a href="deactivate.php?id=<?= urlencode($row['user_id']) ?>" title="Deactivate" onclick="return confirm('Are you sure you want to deactivate this user?');">
                                                     <i class="fa-solid fa-user-slash text-warning"></i>
                                                 </a>
                                             <?php endif; ?>
-                                            <a href="delete.php?id=<?= $row['user_id'] ?>" title="Delete" onclick="return confirm('Are you sure you want to delete this user? This cannot be undone.');">
+                                            <a href="delete.php?id=<?= urlencode($row['user_id']) ?>" title="Delete" onclick="return confirm('Are you sure you want to delete this user? This cannot be undone.');">
                                                 <i class="fa-solid fa-trash text-danger"></i>
                                             </a>
-                                            <a href="orders.php?user_id=<?= $row['user_id'] ?>" title="View Orders">
+                                            <a href="orders.php?user_id=<?= urlencode($row['user_id']) ?>" title="View Orders">
                                                 <i class="fa-solid fa-box text-info"></i>
                                             </a>
                                         <?php endif; ?>
@@ -191,4 +225,7 @@ $itemCount = mysqli_num_rows($result);
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>   
+<?php 
+mysqli_stmt_close($stmt);
+include '../../includes/footer.php'; 
+?>

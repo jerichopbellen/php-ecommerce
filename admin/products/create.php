@@ -27,9 +27,16 @@ if ($_SESSION['role'] !== 'admin') {
 
 include '../../includes/adminHeader.php';
 include '../../includes/config.php';
+include '../../includes/alert.php';
 
-$result1 = mysqli_query($conn, "SELECT * FROM categories ORDER BY name ASC");
-$result2 = mysqli_query($conn, "SELECT * FROM brands ORDER BY name ASC");
+// Use prepared statements for fetching categories and brands
+$stmt1 = mysqli_prepare($conn, "SELECT category_id, name FROM categories ORDER BY name ASC");
+mysqli_stmt_execute($stmt1);
+$result1 = mysqli_stmt_get_result($stmt1);
+
+$stmt2 = mysqli_prepare($conn, "SELECT brand_id, name FROM brands ORDER BY name ASC");
+mysqli_stmt_execute($stmt2);
+$result2 = mysqli_stmt_get_result($stmt2);
 ?>
 <div class="container my-5">
     <div class="row justify-content-center">
@@ -44,13 +51,13 @@ $result2 = mysqli_query($conn, "SELECT * FROM brands ORDER BY name ASC");
                         <!-- Product Name -->
                         <div class="mb-3">
                             <label for="name" class="form-label">Product Name</label>
-                            <input type="text" class="form-control" id="name" name="name" placeholder="Enter product name" required>
+                            <input type="text" class="form-control" id="name" name="name" placeholder="Enter product name" maxlength="255" required>
                         </div>
 
                         <!-- Description -->
                         <div class="mb-3">
                             <label for="description" class="form-label">Description</label>
-                            <input type="text" class="form-control" id="description" name="description" placeholder="Enter product description" required>
+                            <input type="text" class="form-control" id="description" name="description" placeholder="Enter product description" maxlength="1000" required>
                         </div>
 
                         <!-- Brand -->
@@ -59,7 +66,7 @@ $result2 = mysqli_query($conn, "SELECT * FROM brands ORDER BY name ASC");
                             <select class="form-select" id="brand" name="brand" required>
                                 <option value="" disabled selected>Select Brand</option>
                                 <?php while ($row = mysqli_fetch_assoc($result2)) : ?>
-                                    <option value="<?= $row['brand_id'] ?>"><?= htmlspecialchars($row['name']) ?></option>
+                                    <option value="<?=(int)$row['brand_id'] ?>"><?=htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8') ?></option>
                                 <?php endwhile; ?>
                             </select>
                         </div>
@@ -70,7 +77,7 @@ $result2 = mysqli_query($conn, "SELECT * FROM brands ORDER BY name ASC");
                             <select class="form-select" id="category" name="category" required>
                                 <option value="" disabled selected>Select Category</option>
                                 <?php while ($row = mysqli_fetch_assoc($result1)) : ?>
-                                    <option value="<?= $row['category_id'] ?>"><?= htmlspecialchars($row['name']) ?></option>
+                                    <option value="<?=(int)$row['category_id'] ?>"><?=htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8') ?></option>
                                 <?php endwhile; ?>
                             </select>
                         </div>
@@ -80,13 +87,13 @@ $result2 = mysqli_query($conn, "SELECT * FROM brands ORDER BY name ASC");
                             <label class="form-label">Dimensions (cm)</label>
                             <div class="row g-2">
                                 <div class="col-md-4">
-                                    <input type="number" step="0.01" class="form-control" name="length" placeholder="Length" required>
+                                    <input type="number" step="0.01" min="0" max="9999.99" class="form-control" name="length" placeholder="Length" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <input type="number" step="0.01" class="form-control" name="width" placeholder="Width" required>
+                                    <input type="number" step="0.01" min="0" max="9999.99" class="form-control" name="width" placeholder="Width" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <input type="number" step="0.01" class="form-control" name="height" placeholder="Height" required>
+                                    <input type="number" step="0.01" min="0" max="9999.99" class="form-control" name="height" placeholder="Height" required>
                                 </div>
                             </div>
                         </div>
@@ -108,4 +115,8 @@ $result2 = mysqli_query($conn, "SELECT * FROM brands ORDER BY name ASC");
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<?php 
+mysqli_stmt_close($stmt1);
+mysqli_stmt_close($stmt2);
+include '../../includes/footer.php'; 
+?>

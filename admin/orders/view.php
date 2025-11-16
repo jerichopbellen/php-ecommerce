@@ -27,10 +27,18 @@ if ($_SESSION['role'] !== 'admin') {
 
 include '../../includes/adminHeader.php';
 include '../../includes/config.php';
+include '../../includes/alert.php';
 
+// Input sanitization
 $order_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-// Fetch order details with address
+if ($order_id <= 0) {
+    echo "<div class='container my-5'><div class='alert alert-warning'>Invalid order ID.</div></div>";
+    include '../../includes/footer.php';
+    exit;
+}
+
+// Fetch order details with address using prepared statement
 $sql = "
     SELECT 
         o.order_id,
@@ -58,13 +66,24 @@ $sql = "
         o.subtotal
     FROM view_order_transaction_details o
     LEFT JOIN addresses a ON o.address_id = a.address_id
-    WHERE o.order_id = $order_id
+    WHERE o.order_id = ?
     ORDER BY o.product_name ASC
 ";
 
-$result = mysqli_query($conn, $sql);
+$stmt = mysqli_prepare($conn, $sql);
+if (!$stmt) {
+    echo "<div class='container my-5'><div class='alert alert-danger'>Database error occurred.</div></div>";
+    include '../../includes/footer.php';
+    exit;
+}
+
+mysqli_stmt_bind_param($stmt, "i", $order_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+
 if (!$result || mysqli_num_rows($result) === 0) {
     echo "<div class='container my-5'><div class='alert alert-warning'>Order not found.</div></div>";
+    mysqli_stmt_close($stmt);
     include '../../includes/footer.php';
     exit;
 }
@@ -95,12 +114,14 @@ while ($row = mysqli_fetch_assoc($result)) {
         ];
     }
 }
+
+mysqli_stmt_close($stmt);
 ?>
 
 <div class="container my-5">
-    <h3><i class="bi bi-box me-2"></i>Order #<?= $orderMeta['order_id'] ?></h3>
+    <h3><i class="bi bi-box me-2"></i>Order #<?= htmlspecialchars($orderMeta['order_id']) ?></h3>
     <div class="mb-4">
-        <p><strong>Date:</strong> <?= date('Y-m-d H:i', strtotime($orderMeta['created_at'])) ?></p>
+        <p><strong>Date:</strong> <?=htmlspecialchars(date('Y-m-d H:i', strtotime($orderMeta['created_at']))) ?></p>
         <?php $disabled = (strtolower($orderMeta['status']) === 'cancelled') ? 'disabled' : ''; ?>        
         <form action="status_update.php" method="POST" class="d-flex align-items-center gap-2 mb-2">
             <label for="status" class="form-label mb-0"><strong>Status:</strong></label>
@@ -123,14 +144,14 @@ while ($row = mysqli_fetch_assoc($result)) {
                         $disabledOption = 'disabled';
                     }
 
-                    echo "<option value='$status' $selected $disabledOption>" . ucfirst($status) . "</option>";
+                    echo "<option value='" . htmlspecialchars($status) . "' $selected $disabledOption>" . htmlspecialchars(ucfirst($status)) . "</option>";
                 }
                 ?>
             </select>
-            <input type="hidden" name="order_id" value="<?= $orderMeta['order_id'] ?>">
+            <input type="hidden" name="order_id" value="<?=htmlspecialchars($orderMeta['order_id']) ?>">
         </form>
-        <p><strong>Tracking #:</strong> <?= htmlspecialchars($orderMeta['tracking_number'] ?? '-') ?></p>
-        <p><strong>Customer:</strong> <?= htmlspecialchars($orderMeta['customer_name']) ?> (<?= htmlspecialchars($orderMeta['customer_email']) ?>)</p>
+        <p><strong>Tracking #:</strong> <?=htmlspecialchars($orderMeta['tracking_number'] ?? '-') ?></p>
+        <p><strong>Customer:</strong> <?=htmlspecialchars($orderMeta['customer_name']) ?> (<?=htmlspecialchars($orderMeta['customer_email']) ?>)</p>
         <p><strong>Address:</strong><br>
             <?= htmlspecialchars($orderMeta['recipient']) ?><br>
             <?= htmlspecialchars($orderMeta['street']) ?><br>
@@ -161,20 +182,20 @@ while ($row = mysqli_fetch_assoc($result)) {
                     <tbody>
                         <?php foreach ($items as $item): ?>
                             <tr>
-                                <td><?= htmlspecialchars($item['product_name']) ?></td>
-                                <td><?= htmlspecialchars($item['brand_name']) ?></td>
-                                <td><?= htmlspecialchars($item['category_name']) ?></td>
-                                <td><?= htmlspecialchars($item['color']) ?> / <?= htmlspecialchars($item['material']) ?></td>
-                                <td>₱<?= number_format($item['unit_price'], 2) ?></td>
-                                <td><?= $item['quantity'] ?></td>
-                                <td>₱<?= number_format($item['subtotal'], 2) ?></td>
+                                <td><?=htmlspecialchars($item['product_name']) ?></td>
+                                <td><?=htmlspecialchars($item['brand_name']) ?></td>
+                                <td><?=htmlspecialchars($item['category_name']) ?></td>
+                                <td><?=htmlspecialchars($item['color']) ?> / <?=htmlspecialchars($item['material']) ?></td>
+                                <td>₱<?=number_format($item['unit_price'], 2) ?></td>
+                                <td><?=htmlspecialchars($item['quantity']) ?></td>
+                                <td>₱<?=number_format($item['subtotal'], 2) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                     <tfoot>
                         <tr class="table-light">
                             <td colspan="6" class="text-end"><strong>Total:</strong></td>
-                            <td><strong>₱<?= number_format($total, 2) ?></strong></td>
+                            <td><strong>₱<?=number_format($total, 2) ?></strong></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -187,4 +208,4 @@ while ($row = mysqli_fetch_assoc($result)) {
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<?php include '../../includes/footer.php'; ?>/td>/td>

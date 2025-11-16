@@ -29,9 +29,11 @@ include '../../includes/adminHeader.php';
 include '../../includes/config.php';
 include '../../includes/alert.php';
 
-$keyword = isset($_GET['search']) ? strtolower(trim($_GET['search'])) : '';
-$keyword = mysqli_real_escape_string($conn, $keyword);
+// Input sanitization
+$keyword = isset($_GET['search']) ? trim($_GET['search']) : '';
+$keyword = htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8');
 
+// Prepare SQL statement
 $sql = "
     SELECT 
         p.product_id,
@@ -45,13 +47,21 @@ $sql = "
     LEFT JOIN categories c ON p.category_id = c.category_id";
 
 if ($keyword) {
-    $sql .= " WHERE p.name LIKE '%$keyword%' OR b.name LIKE '%$keyword%' OR c.name LIKE '%$keyword%'";
-    
+    $sql .= " WHERE p.name LIKE ? OR b.name LIKE ? OR c.name LIKE ?";
 }
 
 $sql .= " ORDER BY p.name ASC";
 
-$result = mysqli_query($conn, $sql);
+// Use prepared statement
+$stmt = mysqli_prepare($conn, $sql);
+
+if ($keyword) {
+    $searchParam = "%$keyword%";
+    mysqli_stmt_bind_param($stmt, "sss", $searchParam, $searchParam, $searchParam);
+}
+
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 $itemCount = mysqli_num_rows($result);
 ?>
 
@@ -65,7 +75,7 @@ $itemCount = mysqli_num_rows($result);
 
     <form method="GET" class="mb-4">
         <div class="input-group">
-            <input type="text" name="search" class="form-control" placeholder="Search by name, brand, or category..." value="<?=htmlspecialchars($keyword) ?>">
+            <input type="text" name="search" class="form-control" placeholder="Search by name, brand, or category..." value="<?=htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8') ?>">
             <button class="btn btn-outline-secondary" type="submit">
                 <i class="bi bi-search"></i>
             </button>
@@ -90,16 +100,16 @@ $itemCount = mysqli_num_rows($result);
                     <tbody>
                         <?php while ($row = mysqli_fetch_assoc($result)) : ?>
                             <tr>
-                                <td><?= htmlspecialchars($row['product_name']) ?></td>
-                                <td><?= htmlspecialchars($row['description']) ?></td>
-                                <td><?= htmlspecialchars($row['dimension']) ?></td>
-                                <td><?= htmlspecialchars($row['brand_name']) ?></td>
-                                <td><?= htmlspecialchars($row['category_name']) ?></td>
+                                <td><?=htmlspecialchars($row['product_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?=htmlspecialchars($row['description'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?=htmlspecialchars($row['dimension'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?=htmlspecialchars($row['brand_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?=htmlspecialchars($row['category_name'], ENT_QUOTES, 'UTF-8') ?></td>
                                 <td class="text-center">
-                                    <a href="edit.php?id=<?= $row['product_id'] ?>" class="text-primary me-2" title="Edit">
+                                    <a href="edit.php?id=<?= urlencode($row['product_id']) ?>" class="text-primary me-2" title="Edit">
                                         <i class="fa-regular fa-pen-to-square"></i>
                                     </a>
-                                    <a href="delete.php?id=<?= $row['product_id'] ?>" class="text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this product?')">
+                                    <a href="delete.php?id=<?= urlencode($row['product_id']) ?>" class="text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this product?')">
                                         <i class="fa-solid fa-trash"></i>
                                     </a>
                                 </td>
@@ -107,7 +117,7 @@ $itemCount = mysqli_num_rows($result);
                         <?php endwhile; ?>
                         <?php if ($itemCount === 0): ?>
                             <tr>
-                                <td colspan="7" class="text-center text-muted">No products found.</td>
+                                <td colspan="6" class="text-center text-muted">No products found.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -117,4 +127,7 @@ $itemCount = mysqli_num_rows($result);
     </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<?php 
+mysqli_stmt_close($stmt);
+include '../../includes/footer.php'; 
+?>

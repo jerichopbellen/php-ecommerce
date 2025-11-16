@@ -11,13 +11,19 @@ include '../../includes/config.php';
 
 
 if (isset($_POST['submit'])) {
-    $product =  trim($_POST['product']);
-    $img_path = trim($_POST['img_path']);
-    $alt_text = trim($_POST['alt-text']);
+    // Input sanitization
+    $product = filter_var(trim($_POST['product']), FILTER_VALIDATE_INT);
+    $alt_text = htmlspecialchars(trim($_POST['alt-text']), ENT_QUOTES, 'UTF-8');
+
+    if (!$product) {
+        $_SESSION['error'] = "Invalid product ID.";
+        header("Location: create.php");
+        exit;
+    }
 
     if (isset($_FILES['img_path'])) {
-    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    $fileType = $_FILES['img_path']['type'];
+        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        $fileType = $_FILES['img_path']['type'];
 
         if (in_array($fileType, $allowedTypes)) {
             $fileName = basename($_FILES['img_path']['name']);
@@ -31,30 +37,45 @@ if (isset($_POST['submit'])) {
 
             // Move the file
             if (move_uploaded_file($_FILES['img_path']['tmp_name'], $targetPath)) {
-                // ✅ This is the path you want to store in the database
                 $dbPath = '/Furnitures/admin/product_images/images/' . $fileName;
             } else {
-                die("Couldn't copy");
+                $_SESSION['error'] = "Failed to upload file.";
+                header("Location: create.php");
+                exit;
             }
         } 
         else {
-            $_SESSION['error'] = "wrong file type";
+            $_SESSION['error'] = "Wrong file type.";
             header("Location: create.php");
             exit;
         }
-    }
-
-    $sql = "INSERT INTO product_images (img_path, alt_text, product_id) VALUES('{$dbPath}', '{$alt_text}', '{$product}')";
-    $result = mysqli_query($conn, $sql);
-
-    if($result) {
-        $_SESSION['success'] = "Product image added successfully.";
-        header("Location: index.php");
-        exit;
-    }
-    else {
-        $_SESSION['error'] = "Failed to add product image. Please try again.";
+    } else {
+        $_SESSION['error'] = "No file uploaded.";
         header("Location: create.php");
         exit;
     }
+
+    // Begin transaction
+    mysqli_begin_transaction($conn);
+
+    try {
+        // Prepared statement
+        $stmt = mysqli_prepare($conn, "INSERT INTO product_images (img_path, alt_text, product_id) VALUES(?, ?, ?)");
+        mysqli_stmt_bind_param($stmt, "ssi", $dbPath, $alt_text, $product);
+        
+        if (mysqli_stmt_execute($stmt)) {
+            mysqli_commit($conn);
+            $_SESSION['success'] = "Product image added successfully.";
+            header("Location: index.php");
+        } else {
+            throw new Exception("Failed to execute statement.");
+        }
+        
+        mysqli_stmt_close($stmt);
+    } catch (Exception $e) {
+        mysqli_rollback($conn);
+        $_SESSION['error'] = "Failed to add product image. Please try again.";
+        header("Location: create.php");
+    }
+    exit;
 }
