@@ -8,46 +8,37 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 }
 
 include '../../includes/config.php';
-
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 try {
-    // Input sanitization
-    if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-        throw new Exception("Invalid tag ID.");
+    // Validate input
+    if (!isset($_GET['product_id']) || !is_numeric($_GET['product_id']) ||
+        !isset($_GET['tag_id']) || !is_numeric($_GET['tag_id'])) {
+        throw new Exception("Invalid product or tag ID.");
     }
-    
-    $id = intval($_GET['id']);
-    
-    // Start transaction
+
+    $product_id = intval($_GET['product_id']);
+    $tag_id     = intval($_GET['tag_id']);
+
     mysqli_begin_transaction($conn);
-    
-    // Prepared statement
-    $stmt = mysqli_prepare($conn, "DELETE FROM product_tags WHERE tag_id = ?");
-    mysqli_stmt_bind_param($stmt, "i", $id);
-    mysqli_stmt_execute($stmt);
-    
-    // Check if any rows were affected
-    if (mysqli_stmt_affected_rows($stmt) === 0) {
-        throw new Exception("Product tag not found.");
+
+    // Delete specific product-tag link
+    $stmt = $conn->prepare("DELETE FROM product_tags WHERE product_id = ? AND tag_id = ?");
+    $stmt->bind_param("ii", $product_id, $tag_id);
+    $stmt->execute();
+
+    if ($stmt->affected_rows === 0) {
+        throw new Exception("This tag is not linked to the product.");
     }
-    
-    mysqli_stmt_close($stmt);
-    
-    // Commit transaction
+
     mysqli_commit($conn);
-    
-    $_SESSION['success'] = "Product Tag deleted successfully.";
-    header("Location: index.php");
-    exit;
+    $_SESSION['success'] = "Tag removed from product successfully.";
 } catch (Exception $e) {
-    // Rollback transaction on error
     if (isset($conn)) {
         mysqli_rollback($conn);
     }
-    $_SESSION['error'] = "Error deleting product tag: " . $e->getMessage();
-    header("Location: index.php");
-    exit;
+    $_SESSION['error'] = "Error removing tag: " . $e->getMessage();
 }
 
-?>
+header("Location: index.php");
+exit;
