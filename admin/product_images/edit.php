@@ -1,0 +1,97 @@
+<?php
+session_start();
+
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['flash'] = "Please log in to access this page.";
+    header("Location: ../../user/login.php");
+    exit;
+}
+
+if ($_SESSION['role'] !== 'admin') {
+    echo "
+    <html>
+    <head>
+        <link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'>
+        <title>Access Denied</title>
+    </head>
+    <body class='bg-light'>
+        <div class='container py-5'>
+            <div class='alert alert-danger text-center'>
+                Access denied. This page is restricted to administrators.
+            </div>
+        </div>
+    </body>
+    </html>";
+    exit;
+}
+
+include '../../includes/adminHeader.php';
+include '../../includes/config.php';
+
+
+$id = intval($_GET['id']);
+
+$image = mysqli_query($conn, "
+    SELECT 
+        i.image_id, 
+        i.img_path,
+        p.product_id,
+        p.name AS product_name,
+        i.alt_text  
+    FROM product_images i
+    INNER JOIN products p ON i.product_id = p.product_id
+    WHERE i.image_id = {$id}
+    LIMIT 1
+");
+$image = mysqli_fetch_assoc($image);
+?>
+
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <?php include '../../includes/alert.php'; ?>
+          <h4 class="card-title mb-4">
+            <i class="bi bi-image me-2 text-dark"></i>Edit Product Image
+          </h4>
+          <form method="POST" enctype="multipart/form-data" action="update.php">
+            <input type="hidden" name="image_id" value="<?= $image['image_id'] ?>">
+            <input type="hidden" name="existingImage" value="<?= $image['img_path'] ?>">
+
+            <div class="mb-3">
+              <label for="product" class="form-label">Product Name</label>
+              <select class="form-select" id="product" name="product_id" disabled>
+                <option value="<?= $image['product_id'] ?>" selected><?= htmlspecialchars($image['product_name']) ?></option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="alt_text" class="form-label">Alt Text</label>
+              <input type="text" class="form-control" id="alt_text" name="alt_text" value="<?= htmlspecialchars($image['alt_text']) ?>" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="image" class="form-label">Image File</label>
+              <input type="file" class="form-control" id="image" name="image">
+              <div class="mt-3">
+                <img src="<?= $image['img_path'] ?>" alt="<?= htmlspecialchars($image['alt_text']) ?>" width="250" height="250" class="border rounded">
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <button type="submit" class="btn btn-primary" name="submit" value="submit">
+                <i class="bi bi-check-circle me-1"></i>Update
+              </button>
+              <a href="index.php" class="btn btn-secondary">
+                <i class="bi bi-x-circle me-1"></i>Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<?php include '../../includes/footer.php'; ?>
