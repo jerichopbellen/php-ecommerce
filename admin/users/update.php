@@ -21,14 +21,6 @@ if ($user_id === false || $user_id === null || empty($role)) {
     exit;
 }
 
-// Optional: Validate role against allowed values
-$allowed_roles = ['admin', 'user', 'moderator']; // Adjust as needed
-if (!in_array($role, $allowed_roles)) {
-    $_SESSION['error'] = "Invalid role specified.";
-    header("Location: edit.php?id={$user_id}");
-    exit;
-}
-
 // Begin transaction
 mysqli_begin_transaction($conn);
 
@@ -47,7 +39,7 @@ try {
     } else {
         mysqli_rollback($conn);
         mysqli_stmt_close($stmt);
-        $_SESSION['error'] = "Update failed or no changes made.";
+        $_SESSION['info'] = "Update failed: no changes made.";
         header("Location: edit.php?id={$user_id}");
         exit;
     }
