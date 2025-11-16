@@ -45,6 +45,7 @@ function buildOrderDetailsHtml(mysqli $conn, int $orderId): array {
 
         $rows[] = [
             'product_name' => htmlspecialchars($r['product_name'], ENT_QUOTES, 'UTF-8'),
+            'variant_name' => htmlspecialchars($r['color'] . ' ' . $r['material'], ENT_QUOTES, 'UTF-8'), // ✅ include variant
             'quantity'     => max(0, (int)$r['quantity']),
             'unit_price'   => max(0.0, (float)$r['unit_price']),
             'subtotal'     => max(0.0, (float)$r['subtotal']),
@@ -68,6 +69,7 @@ function buildOrderDetailsHtml(mysqli $conn, int $orderId): array {
         <thead style='background:#f6f6f6;'>
             <tr>
                 <th align='left'>Product</th>
+                <th align='left'>Variant</th>
                 <th align='center'>Qty</th>
                 <th align='right'>Unit Price</th>
                 <th align='right'>Subtotal</th>
@@ -78,6 +80,7 @@ function buildOrderDetailsHtml(mysqli $conn, int $orderId): array {
     foreach ($rows as $it) {
         $html .= "<tr>
             <td>" . $it['product_name'] . "</td>
+            <td>" . $it['variant_name'] . "</td>
             <td align='center'>" . $it['quantity'] . "</td>
             <td align='right'>" . number_format($it['unit_price'], 2) . "</td>
             <td align='right'>" . number_format($it['subtotal'], 2) . "</td>
@@ -87,7 +90,7 @@ function buildOrderDetailsHtml(mysqli $conn, int $orderId): array {
     $html .= "</tbody>
         <tfoot>
             <tr>
-                <td colspan='3' align='right'><strong>Grand Total</strong></td>
+                <td colspan='4' align='right'><strong>Grand Total</strong></td>
                 <td align='right'><strong>" . number_format($grandTotal, 2) . "</strong></td>
             </tr>
         </tfoot>
