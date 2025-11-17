@@ -38,19 +38,26 @@ if (isset($_POST['submit_profile'])) {
         header("Location: profile.php"); exit();
     }
 
-    // Check if email already exists for another user
-    $check_sql = "SELECT user_id FROM users WHERE email = ? AND user_id != ?";
+    // Check if email already exists for ANY user
+    $check_sql = "SELECT user_id FROM users WHERE email = ?";
     $check_stmt = mysqli_prepare($conn, $check_sql);
-    mysqli_stmt_bind_param($check_stmt, 'si', $email, $userId);
+    mysqli_stmt_bind_param($check_stmt, 's', $email);
     mysqli_stmt_execute($check_stmt);
     mysqli_stmt_store_result($check_stmt);
 
     if (mysqli_stmt_num_rows($check_stmt) > 0) {
+        mysqli_stmt_bind_result($check_stmt, $existing_user_id);
+        mysqli_stmt_fetch($check_stmt);
         mysqli_stmt_close($check_stmt);
-        $_SESSION['emailError'] = 'Email is already in use by another account.';
-        header("Location: profile.php"); exit();
+
+        // Only allow if it's the current user's own email
+        if ($existing_user_id != $userId) {
+            $_SESSION['emailError'] = 'Email is already in use by another account.';
+            header("Location: profile.php"); exit();
+        }
+    } else {
+        mysqli_stmt_close($check_stmt);
     }
-    mysqli_stmt_close($check_stmt);
 
     // Update query
     $sql = "UPDATE users SET first_name = ?, last_name = ?, email = ? WHERE user_id = ?";
