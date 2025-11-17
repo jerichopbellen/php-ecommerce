@@ -13,6 +13,12 @@ if (!$userId) {
 if (isset($_POST['submit_profile'])) {
     $fname = htmlspecialchars(trim($_POST['fname'] ?? ''), ENT_QUOTES, 'UTF-8');
     $lname = htmlspecialchars(trim($_POST['lname'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $email = trim($_POST['email'] ?? '');
+
+    // Persist values in session for repopulation
+    $_SESSION['fname'] = $_POST['fname'];
+    $_SESSION['lname'] = $_POST['lname'];
+    $_SESSION['email'] = $_POST['email'];
 
     // Validation
     if ($fname === '') {
@@ -23,14 +29,40 @@ if (isset($_POST['submit_profile'])) {
         $_SESSION['lnameError'] = 'Last name is required.';
         header("Location: profile.php"); exit();
     }
+    if ($email === '') {
+        $_SESSION['emailError'] = 'Email is required.';
+        header("Location: profile.php"); exit();
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['emailError'] = 'Invalid email format.';
+        header("Location: profile.php"); exit();
+    }
+
+    // Check if email already exists for another user
+    $check_sql = "SELECT user_id FROM users WHERE email = ? AND user_id != ?";
+    $check_stmt = mysqli_prepare($conn, $check_sql);
+    mysqli_stmt_bind_param($check_stmt, 'si', $email, $userId);
+    mysqli_stmt_execute($check_stmt);
+    mysqli_stmt_store_result($check_stmt);
+
+    if (mysqli_stmt_num_rows($check_stmt) > 0) {
+        mysqli_stmt_close($check_stmt);
+        $_SESSION['emailError'] = 'Email is already in use by another account.';
+        header("Location: profile.php"); exit();
+    }
+    mysqli_stmt_close($check_stmt);
 
     // Update query
-    $sql = "UPDATE users SET first_name = ?, last_name = ? WHERE user_id = ?";
+    $sql = "UPDATE users SET first_name = ?, last_name = ?, email = ? WHERE user_id = ?";
     $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, 'ssi', $fname, $lname, $userId);
+    mysqli_stmt_bind_param($stmt, 'sssi', $fname, $lname, $email, $userId);
     mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
 
+    // Clear session values after success
+    foreach (['fname','lname','email'] as $field) {
+        unset($_SESSION[$field]);
+    }
 
     $_SESSION['success'] = 'Profile updated successfully.';
     header("Location: profile.php");
