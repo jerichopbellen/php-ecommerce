@@ -7,14 +7,13 @@ require __DIR__ . '/phpmailer/src/Exception.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// Mailtrap SMTP config
 $mailConfig = [
     'host' => 'sandbox.smtp.mailtrap.io',
-    'port' =>  2525,
-    'username' => 'fb6313869eb3e1',
-    'password' => '467e529f2bd258',
+    'port' => 2525,
+    'username' => '170796d24a02e0',
+    'password' => '1b5e337450d213',
     'from_email' => 'no-reply@furnitureshop.com',
-    'from_name' => 'Furniture Shop'
+    'from_name' => 'Furniture Shop',      
 ];
 
 function sendMail(string $toEmail, string $toName, string $subject, string $bodyHtml, array $mailConfig): bool {
