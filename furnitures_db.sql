@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 16, 2025 at 07:20 AM
+-- Generation Time: Nov 17, 2025 at 10:47 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -52,7 +52,9 @@ INSERT INTO `addresses` (`address_id`, `recipient`, `street`, `barangay`, `city`
 (22, 'Olivia Rodrigo', '589 Dita Street', 'Lower Bicutan', 'South Korea', 'MIMAROPA', '5689', 'Philippines', '09202558778', 17),
 (23, 'Katy Perry', '88 Seoul street', 'Manhattan', 'New York', 'New York State', '5689', 'Philippines', '09202558774', 18),
 (24, 'Jericho Bellen', '99 New York street', 'Silangan', 'Cubao', 'Quezon City', '1234', 'USA', '09202558774', 1),
-(26, 'Lisa', '1 Seoul st.', 'Silangan', 'Cubao', 'Quezon City', '1234', 'Philippines', '09202558774', 19);
+(26, 'Lisa', '1 Seoul st.', 'Silangan', 'Cubao', 'Quezon City', '1234', 'Philippines', '09202558774', 19),
+(33, 'taylor swift', '33 Uptown St.', 'Fort Bonifacio', 'Makati', 'Metro Manila', '2587', 'Philippines', '12345678910', 23),
+(34, 'joe alwyn', '31 New York', 'Hawaii', 'Harvard', 'MIMAROPA', '1478', 'Philippines', '9876543210', 23);
 
 -- --------------------------------------------------------
 
@@ -70,7 +72,7 @@ CREATE TABLE `brands` (
 --
 
 INSERT INTO `brands` (`brand_id`, `name`) VALUES
-(2, 'Ashley Furnitures'),
+(2, 'Ashley Furniture'),
 (4, 'Home Suite'),
 (1, 'IKEA'),
 (5, 'Lexington'),
@@ -136,7 +138,8 @@ CREATE TABLE `contact_messages` (
 INSERT INTO `contact_messages` (`id`, `name`, `email`, `subject`, `message`, `submitted_at`, `reply`, `replied_at`) VALUES
 (3, 'jennie kim', 'jenniekim@gmail.com', 'BEDS', 'is it free shipping?', '2025-11-14 17:37:41', 'yes', '2025-11-15 01:38:35'),
 (4, 'jennie kim', 'jenniekim@gmail.com', 'DISCOUNTS', 'may discount po ba?', '2025-11-15 03:27:39', 'wala po.', '2025-11-15 11:30:23'),
-(5, 'jennie kim', 'jenniekim@gmail.com', 'DELIVERY', 'gaano po katagal bago ma deliver?', '2025-11-15 03:29:00', '4-5 days', '2025-11-15 11:30:13');
+(5, 'jennie kim', 'jenniekim@gmail.com', 'DELIVERY', 'gaano po katagal bago ma deliver?', '2025-11-15 03:29:00', '4-5 days', '2025-11-15 11:30:13'),
+(6, 'taylor swift', 'taylorswift@gmail.com', 'OVERSEAS SHIPPING', 'pwede sa USA?', '2025-11-16 13:55:07', 'philippines only po', '2025-11-16 22:58:05');
 
 -- --------------------------------------------------------
 
@@ -174,7 +177,20 @@ INSERT INTO `orders` (`order_id`, `tracking_number`, `created_at`, `user_id`, `a
 (36, 'ORD-20251114-9814', '2025-11-14 12:24:43', 1, 8, 'cod', 'Cancelled', '2025-11-14 20:27:05'),
 (37, 'ORD-20251114-4811', '2025-11-14 12:35:59', 1, 8, 'cod', 'Shipped', NULL),
 (40, 'ORD-20251115-1535', '2025-11-15 06:29:12', 19, 26, 'cod', 'Received', NULL),
-(41, NULL, '2025-11-15 12:15:44', 19, 26, 'cod', 'Pending', NULL);
+(41, 'ORD-20251116-9512', '2025-11-15 12:15:44', 19, 26, 'cod', 'Shipped', NULL),
+(44, 'ORD-20251116-1173', '2025-11-16 09:28:07', 19, 26, 'cod', 'Received', NULL),
+(45, NULL, '2025-11-16 09:34:31', 19, 26, 'cod', 'Cancelled', '2025-11-16 17:35:03'),
+(46, NULL, '2025-11-16 09:35:35', 19, 26, 'cod', 'Cancelled', '2025-11-16 17:36:58'),
+(47, NULL, '2025-11-16 09:37:18', 19, 26, 'cod', 'Cancelled', NULL),
+(48, 'ORD-20251116-5440', '2025-11-16 13:42:16', 23, 33, 'cod', 'Received', NULL),
+(49, NULL, '2025-11-16 13:54:09', 23, 34, 'cod', 'Cancelled', '2025-11-16 21:54:29'),
+(50, NULL, '2025-11-16 14:06:00', 23, 33, 'cod', 'Cancelled', '2025-11-16 22:11:24'),
+(51, 'ORD-20251116-7588', '2025-11-16 14:26:06', 23, 34, 'cod', 'Delivered', NULL),
+(52, 'ORD-20251116-1212', '2025-11-16 14:30:39', 1, 8, 'cod', 'Delivered', NULL),
+(53, NULL, '2025-11-17 03:56:03', 1, 8, 'cod', 'Processing', NULL),
+(54, NULL, '2025-11-17 09:21:53', 11, 18, 'cod', 'Received', NULL),
+(55, 'ORD-20251117-3336', '2025-11-17 09:29:27', 11, 18, 'cod', 'Delivered', NULL),
+(56, 'ORD-20251117-1351', '2025-11-17 09:36:00', 1, 8, 'cod', 'Delivered', NULL);
 
 -- --------------------------------------------------------
 
@@ -219,7 +235,22 @@ INSERT INTO `order_items` (`order_items_id`, `order_id`, `variant_id`, `quantity
 (53, 36, 17, 1, 8999.00),
 (54, 37, 11, 1, 6999.00),
 (57, 40, 4, 1, 8998.00),
-(58, 41, 13, 1, 6999.00);
+(58, 41, 13, 1, 6999.00),
+(62, 44, 17, 1, 8999.00),
+(63, 44, 19, 1, 9999.00),
+(64, 44, 21, 1, 8999.00),
+(65, 45, 15, 1, 799.00),
+(66, 46, 10, 1, 6999.00),
+(67, 47, 41, 1, 9999.00),
+(68, 48, 4, 2, 8998.00),
+(69, 49, 9, 3, 8999.00),
+(70, 50, 9, 2, 8999.00),
+(71, 51, 5, 1, 12999.00),
+(72, 52, 70, 2, 6999.00),
+(73, 53, 5, 1, 12999.00),
+(74, 54, 5, 1, 12999.00),
+(75, 55, 4, 2, 8998.00),
+(76, 56, 62, 1, 1099.00);
 
 -- --------------------------------------------------------
 
@@ -256,7 +287,7 @@ INSERT INTO `products` (`product_id`, `name`, `description`, `dimension`, `creat
 (13, 'Twin Bed with Headboard', 'Durable and minimalist, ideal for guest rooms or kids’ spaces.', '100 x 200 x 35 cm', '2025-11-07 16:20:04', 3, 2),
 (14, 'Bunk Bed with Desk Combo', 'Space-saving solution combining sleep and study in one compact unit.', '200 x 100 x 180 cm', '2025-11-07 16:20:48', 4, 2),
 (15, 'Canopy Bed with Slatted Base', 'Dramatic vertical posts and open slats create a breezy, romantic vibe.', '160 x 210 x 200 cm', '2025-11-07 16:21:45', 2, 2),
-(16, 'Accent Armchair in Linen', 'Soft linen fabric and sculpted arms add charm to any reading nook.', '75 x 85 x 90 cm', '2025-11-07 16:22:49', 2, 6),
+(16, 'Accent Armchair in Linen', 'Soft linen fabric sculpted arms add charm to any reading nook.', '75 x 85 x 90 cm', '2025-11-07 16:22:49', 5, 6),
 (17, 'Rocking Chair with Cushions', 'Gentle motion and padded seat make it perfect for relaxation or nurseries.', '70 x 90 x 100 cm', '2025-11-07 16:23:24', 3, 6),
 (18, 'Dining Chair Set', 'Classic craftsmanship for timeless dining room appeal.', '45 x 50 x 90 cm', '2025-11-07 16:24:40', 4, 6),
 (19, 'Foldable Lounge Chair', 'Lightweight and collapsible, great for patios or flexible indoor seating.', '60 x 70 x 85 cm', '2025-11-07 16:25:18', 1, 6),
@@ -291,7 +322,6 @@ CREATE TABLE `product_images` (
 --
 
 INSERT INTO `product_images` (`image_id`, `img_path`, `alt_text`, `product_id`) VALUES
-(1, '/Furnitures/admin/product_images/images/IMG_6296.JPG', 'aaaa', 1),
 (4, '/Furnitures/admin/product_images/images/IMG_6297.JPG', '', 1),
 (5, '/Furnitures/admin/product_images/images/IMG_6298.JPG', '', 1),
 (6, '/Furnitures/admin/product_images/images/IMG_6281.JPG', 'sectional-sofa', 2),
@@ -328,7 +358,7 @@ INSERT INTO `product_images` (`image_id`, `img_path`, `alt_text`, `product_id`) 
 (42, '/Furnitures/admin/product_images/images/IMG_6306.JPG', '', 14),
 (43, '/Furnitures/admin/product_images/images/IMG_6307.JPG', '', 15),
 (44, '/Furnitures/admin/product_images/images/IMG_6308.JPG', '', 15),
-(46, '/Furnitures/admin/product_images/images/IMG_6313.JPG', 'aa-chair', 16),
+(46, '/Furnitures/admin/product_images/images/IMG_6313.JPG', 'ab', 16),
 (47, '/Furnitures/admin/product_images/images/IMG_6314.JPG', '', 16),
 (48, '/Furnitures/admin/product_images/images/IMG_6315.JPG', '', 17),
 (49, '/Furnitures/admin/product_images/images/IMG_6316.JPG', '', 17),
@@ -375,7 +405,8 @@ INSERT INTO `product_images` (`image_id`, `img_path`, `alt_text`, `product_id`) 
 (90, '/Furnitures/admin/product_images/images/IMG_6413.JPG', '', 31),
 (91, '/Furnitures/admin/product_images/images/IMG_6414.JPG', '', 31),
 (92, '/Furnitures/admin/product_images/images/IMG_6415.JPG', '', 31),
-(94, '/Furnitures/admin/product_images/images/IMG_6312.JPG', 'aa-chair', 16);
+(94, '/Furnitures/admin/product_images/images/IMG_6312.JPG', 'aa-chair', 16),
+(96, '/Furnitures/admin/product_images/images/IMG_6296.JPG', 'aa', 1);
 
 -- --------------------------------------------------------
 
@@ -421,13 +452,12 @@ INSERT INTO `product_tags` (`product_id`, `tag_id`) VALUES
 (15, 13),
 (16, 3),
 (16, 30),
-(16, 38),
+(16, 33),
 (17, 3),
 (17, 15),
 (18, 3),
 (18, 28),
 (19, 3),
-(19, 16),
 (20, 4),
 (20, 7),
 (20, 17),
@@ -500,7 +530,6 @@ INSERT INTO `product_variants` (`variant_id`, `color`, `material`, `price`, `pro
 (30, 'black', 'metal', 9999.00, 14),
 (31, 'beige', 'wood', 8999.00, 15),
 (32, 'red', 'wood', 6999.00, 15),
-(34, 'black', '', 6999.00, 16),
 (35, 'red', 'wood', 9999.00, 17),
 (36, 'pink', 'wood', 6999.00, 17),
 (37, 'brown', 'wood', 6999.00, 18),
@@ -531,9 +560,9 @@ INSERT INTO `product_variants` (`variant_id`, `color`, `material`, `price`, `pro
 (64, 'purple', '', 899.00, 31),
 (65, 'pink', '', 999.00, 32),
 (66, 'red', '', 999.00, 32),
-(69, 'white', '', 6999.00, 16),
-(70, 'blue', '', 6999.00, 16),
-(71, 'blue', '', 6999.00, 16);
+(70, 'white', '', 6999.00, 16),
+(73, 'white', '', 6999.00, 16),
+(74, 'white', '', 6999.00, 16);
 
 -- --------------------------------------------------------
 
@@ -561,7 +590,8 @@ INSERT INTO `reviews` (`review_id`, `user_id`, `product_id`, `variant_id`, `rati
 (4, 1, 1, 4, 5, 'matibay **** **** grabe', '2025-11-13 15:55:12', '2025-11-15 18:22:15'),
 (5, 1, 2, 8, 5, 'maganda', '2025-11-14 16:23:25', NULL),
 (6, 19, 1, 4, 2, '', '2025-11-15 14:37:43', '2025-11-15 14:41:20'),
-(7, 4, 12, 25, 5, 'sobrang ganda *******', '2025-11-15 18:25:27', NULL);
+(7, 4, 12, 25, 5, 'sobrang ganda *******', '2025-11-15 18:25:27', NULL),
+(8, 23, 1, 4, 4, '******* ganda', '2025-11-16 21:51:49', '2025-11-16 22:12:57');
 
 -- --------------------------------------------------------
 
@@ -579,8 +609,8 @@ CREATE TABLE `stocks` (
 --
 
 INSERT INTO `stocks` (`variant_id`, `quantity`) VALUES
-(4, 61),
-(5, 60),
+(4, 57),
+(5, 59),
 (6, 0),
 (7, 0),
 (8, 86),
@@ -588,14 +618,14 @@ INSERT INTO `stocks` (`variant_id`, `quantity`) VALUES
 (10, 98),
 (11, 95),
 (12, 0),
-(13, 69),
+(13, 68),
 (15, 58),
 (16, 93),
-(17, 70),
+(17, 69),
 (18, 93),
-(19, 45),
+(19, 44),
 (20, 93),
-(21, 78),
+(21, 77),
 (22, 56),
 (23, 57),
 (24, 96),
@@ -607,7 +637,6 @@ INSERT INTO `stocks` (`variant_id`, `quantity`) VALUES
 (30, 63),
 (31, 70),
 (32, 46),
-(34, 46),
 (35, 70),
 (36, 93),
 (37, 93),
@@ -633,14 +662,14 @@ INSERT INTO `stocks` (`variant_id`, `quantity`) VALUES
 (59, 38),
 (60, 70),
 (61, 69),
-(62, 93),
+(62, 92),
 (63, 45),
 (64, 96),
 (65, 58),
 (66, 23),
-(69, 70),
-(70, 47),
-(71, 93);
+(70, 48),
+(73, 60),
+(74, 60);
 
 -- --------------------------------------------------------
 
@@ -722,13 +751,16 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`user_id`, `email`, `password_hash`, `first_name`, `last_name`, `is_active`, `created_at`, `role`, `img_path`, `is_deleted`, `deleted_at`) VALUES
 (1, 'jerichopbellen@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Jericho', 'Bellen', 1, '2025-11-01 17:13:58', 'admin', '/Furnitures/user/avatars/default-avatar.png', 0, NULL),
 (4, 'deleted_4@example.com', '850b36862fd1c00860ed3a968e75dc110eb9bcf6', 'Deleted', 'User', 0, '2025-11-02 18:05:08', 'customer', '/Furnitures/user/avatars/default-avatar.png', 1, '2025-11-15 20:13:05'),
-(11, 'arianagrande@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Ariana', 'Grande', 1, '2025-11-02 18:41:44', 'customer', '', 0, NULL),
+(11, 'arianagrande@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Ariana', 'Grande', 1, '2025-11-02 18:41:44', 'admin', '', 0, NULL),
 (12, 'deleted_12@example.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Deleted', 'User', 0, '2025-11-02 18:45:39', 'customer', '', 1, '2025-11-10 13:39:10'),
 (17, 'deleted_17@example.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Deleted', 'User', 0, '2025-11-02 18:54:02', 'customer', '', 1, '2025-11-10 13:37:10'),
 (18, 'deleted_18@example.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Deleted', 'User', 0, '2025-11-02 18:58:11', 'customer', '', 1, '2025-11-10 13:32:38'),
 (19, 'lisa@gmail.com', '850b36862fd1c00860ed3a968e75dc110eb9bcf6', 'Lisa', 'Manoban', 1, '2025-11-12 05:54:36', 'customer', '/Furnitures/user/avatars/top-view-soft-drink-glass-with-ice-cubes-straw.jpg', 0, NULL),
-(20, 'jisoo@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'jisoo', 'kim', 0, '2025-11-14 01:06:50', 'customer', '', 0, NULL),
-(21, 'deleted_21@example.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Deleted', 'User', 0, '2025-11-14 01:27:15', 'customer', '/Furnitures/user/avatars/profile_691614f2f08bc5.39360019.jpg', 1, '2025-11-15 20:22:59');
+(20, 'jisoo@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'jisoo', 'kim', 1, '2025-11-14 01:06:50', 'customer', '', 0, NULL),
+(21, 'deleted_21@example.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Deleted', 'User', 0, '2025-11-14 01:27:15', 'customer', '/Furnitures/user/avatars/profile_691614f2f08bc5.39360019.jpg', 1, '2025-11-15 20:22:59'),
+(23, 'taylorswift@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'taylor', 'swift', 1, '2025-11-16 21:40:02', 'customer', '/Furnitures/user/avatars/6919d455b652e_top-view-soft-drink-glass-with-ice-cubes-straw.jpg', 0, NULL),
+(24, 'olivia@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'olivia', 'rodrigo', 1, '2025-11-17 01:45:58', 'customer', '/Furnitures/user/avatars/default-avatar.png', 0, NULL),
+(25, 'sabrinacarpenter@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'sabrina', 'carpenter', 1, '2025-11-17 02:00:08', 'customer', '/Furnitures/user/avatars/profile_691a1127f0a626.90149803.jpg', 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -897,79 +929,79 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `addresses`
 --
 ALTER TABLE `addresses`
-  MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `brands`
 --
 ALTER TABLE `brands`
-  MODIFY `brand_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `brand_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `cart_items`
 --
 ALTER TABLE `cart_items`
-  MODIFY `cart_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=91;
+  MODIFY `cart_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=109;
 
 --
 -- AUTO_INCREMENT for table `categories`
 --
 ALTER TABLE `categories`
-  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `contact_messages`
 --
 ALTER TABLE `contact_messages`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `order_items_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
+  MODIFY `order_items_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `product_images`
 --
 ALTER TABLE `product_images`
-  MODIFY `image_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=96;
+  MODIFY `image_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=98;
 
 --
 -- AUTO_INCREMENT for table `product_variants`
 --
 ALTER TABLE `product_variants`
-  MODIFY `variant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
+  MODIFY `variant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
 
 --
 -- AUTO_INCREMENT for table `reviews`
 --
 ALTER TABLE `reviews`
-  MODIFY `review_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `review_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `tags`
 --
 ALTER TABLE `tags`
-  MODIFY `tag_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
+  MODIFY `tag_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- Constraints for dumped tables
