@@ -97,7 +97,7 @@ mysqli_stmt_close($stmt);
                                     <?php if(isset($_SESSION['fnameError'])) { echo htmlspecialchars($_SESSION['fnameError']); unset($_SESSION['fnameError']); } ?>
                                 </small>
                                 <input type="text" name="fname" id="fname" class="form-control"
-                                    value="<?= isset($_SESSION['fname']) ? htmlspecialchars($_SESSION['fname']) : htmlspecialchars($profile['first_name'], ENT_QUOTES, 'UTF-8') ?>">
+                                    value="<?= htmlspecialchars($profile['first_name'], ENT_QUOTES, 'UTF-8') ?>">
                             </div>
                             <div class="col-md-6">
                                 <label for="lname" class="form-label">Last Name</label>
@@ -105,7 +105,7 @@ mysqli_stmt_close($stmt);
                                     <?php if(isset($_SESSION['lnameError'])) { echo htmlspecialchars($_SESSION['lnameError']); unset($_SESSION['lnameError']); } ?>
                                 </small>
                                 <input type="text" name="lname" id="lname" class="form-control"
-                                    value="<?= isset($_SESSION['lname']) ? htmlspecialchars($_SESSION['lname']) : htmlspecialchars($profile['last_name'], ENT_QUOTES, 'UTF-8') ?>">
+                                    value="<?= htmlspecialchars($profile['last_name'], ENT_QUOTES, 'UTF-8') ?>">
                             </div>
                         </div>
                         <div class="mb-3">
@@ -114,7 +114,7 @@ mysqli_stmt_close($stmt);
                                 <?php if(isset($_SESSION['emailError'])) { echo htmlspecialchars($_SESSION['emailError']); unset($_SESSION['emailError']); } ?>
                             </small>
                             <input type="text" name="email" id="email" class="form-control"
-                                value="<?= isset($_SESSION['email']) ? htmlspecialchars($_SESSION['email']) : htmlspecialchars($profile['email'], ENT_QUOTES, 'UTF-8') ?>">
+                                value="<?= htmlspecialchars($profile['email'], ENT_QUOTES, 'UTF-8') ?>">
                         </div>
                         <button type="submit" name="submit_profile" class="btn btn-outline-primary w-100">
                             <i class="bi bi-pencil-square me-1"></i> Save Changes

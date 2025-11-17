@@ -15,11 +15,6 @@ if (isset($_POST['submit_profile'])) {
     $lname = htmlspecialchars(trim($_POST['lname'] ?? ''), ENT_QUOTES, 'UTF-8');
     $email = trim($_POST['email'] ?? '');
 
-    // Persist values in session for repopulation
-    $_SESSION['fname'] = $_POST['fname'];
-    $_SESSION['lname'] = $_POST['lname'];
-    $_SESSION['email'] = $_POST['email'];
-
     // Validation
     if ($fname === '') {
         $_SESSION['fnameError'] = 'First name is required.';
@@ -66,11 +61,8 @@ if (isset($_POST['submit_profile'])) {
     mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
 
-    // Clear session values after success
-    foreach (['fname','lname','email'] as $field) {
-        unset($_SESSION[$field]);
-    }
-
+    unset($_SESSION['email']);
+    $_SESSION['email'] = $email;
     $_SESSION['success'] = 'Profile updated successfully.';
     header("Location: profile.php");
     exit();
