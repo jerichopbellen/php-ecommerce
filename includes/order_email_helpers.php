@@ -33,7 +33,6 @@ function buildOrderDetailsHtml(mysqli $conn, int $orderId): array {
                 'status'          => $r['status'],
                 'tracking_number' => $r['tracking_number'],
                 'customer_email'  => filter_var($r['customer_email'], FILTER_SANITIZE_EMAIL),
-                'username'        => htmlspecialchars($r['username'], ENT_QUOTES, 'UTF-8'),
                 'recipient'       => htmlspecialchars($r['recipient'], ENT_QUOTES, 'UTF-8'),
                 'street'          => htmlspecialchars($r['street'], ENT_QUOTES, 'UTF-8'),
                 'barangay'        => htmlspecialchars($r['barangay'], ENT_QUOTES, 'UTF-8'),
