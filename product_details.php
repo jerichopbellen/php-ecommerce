@@ -204,7 +204,19 @@ try {
                     <select name="variant_id" id="variant" class="form-select mb-3" form="addToCartForm" required>
                         <?php foreach ($variants as $v): ?>
                             <option value="<?= (int)$v['variant_id'] ?>" <?=$v['quantity'] <= 0 ? 'disabled' : '' ?>>
-                                <?=htmlspecialchars("{$v['color']} / {$v['material']}") ?> 
+                                <?php
+                                $color = trim($v['color'] ?? '');
+                                $material = trim($v['material'] ?? '');
+                                if ($color && $material) {
+                                    echo htmlspecialchars("$color / $material");
+                                } elseif ($color) {
+                                    echo htmlspecialchars($color);
+                                } elseif ($material) {
+                                    echo htmlspecialchars($material);
+                                } else {
+                                    echo 'N/A';
+                                }
+                                ?>
                                 - ₱<?=number_format((float)$v['price'], 2) ?> 
                                 (<?= $v['quantity'] > 0 ? (int)$v['quantity'] . ' in stock' : 'Out of stock' ?>)
                             </option>
