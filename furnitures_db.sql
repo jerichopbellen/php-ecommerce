@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 18, 2025 at 04:40 PM
+-- Generation Time: Nov 18, 2025 at 05:17 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -190,8 +190,9 @@ INSERT INTO `orders` (`order_id`, `tracking_number`, `created_at`, `user_id`, `a
 (56, 'ORD-20251117-1351', '2025-11-17 09:36:00', 1, 8, 'cod', 'Delivered', NULL),
 (57, 'ORD-20251117-1086', '2025-11-17 16:05:01', 1, 8, 'cod', 'Shipped', NULL),
 (58, 'ORD-20251117-7568', '2025-11-17 22:46:27', 11, 18, 'cod', 'Delivered', NULL),
-(59, NULL, '2025-11-17 22:50:40', 11, 18, 'cod', 'Pending', NULL),
-(60, NULL, '2025-11-18 02:42:47', 26, 37, 'cod', 'Pending', NULL);
+(59, 'ORD-20251118-8438', '2025-11-17 22:50:40', 11, 18, 'cod', 'Shipped', NULL),
+(60, NULL, '2025-11-18 02:42:47', 26, 37, 'cod', 'Pending', NULL),
+(66, 'ORD-20251118-0550', '2025-11-18 16:11:53', 11, 18, 'cod', 'Shipped', NULL);
 
 -- --------------------------------------------------------
 
@@ -253,7 +254,8 @@ INSERT INTO `order_items` (`order_items_id`, `order_id`, `variant_id`, `quantity
 (79, 59, 13, 3, 6999.00),
 (80, 60, 22, 1, 8999.00),
 (81, 60, 8, 1, 8999.00),
-(82, 60, 11, 1, 6999.00);
+(82, 60, 11, 1, 6999.00),
+(88, 66, 10, 1, 6999.00);
 
 -- --------------------------------------------------------
 
@@ -618,10 +620,10 @@ INSERT INTO `stocks` (`variant_id`, `quantity`) VALUES
 (7, 0),
 (8, 86),
 (9, 42),
-(10, 98),
+(10, 97),
 (11, 93),
 (12, 0),
-(13, 68),
+(13, 65),
 (15, 56),
 (16, 93),
 (17, 69),
@@ -945,7 +947,7 @@ ALTER TABLE `brands`
 -- AUTO_INCREMENT for table `cart_items`
 --
 ALTER TABLE `cart_items`
-  MODIFY `cart_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=126;
+  MODIFY `cart_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=127;
 
 --
 -- AUTO_INCREMENT for table `categories`
@@ -963,13 +965,13 @@ ALTER TABLE `contact_messages`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `order_items_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
+  MODIFY `order_items_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=89;
 
 --
 -- AUTO_INCREMENT for table `products`
