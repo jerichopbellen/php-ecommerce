@@ -39,7 +39,9 @@ function sendMail(string $toEmail, string $toName, string $subject, string $body
 
         $mail->send();
         return true;
-    } catch (Exception $e) {
+    } 
+    catch (Exception $e) {
+        $_SESSION['info'] = "Email could not be sent: Internet not available and/or could not reach SMTP server.";
         error_log('Mail error: ' . $mail->ErrorInfo);
         return false;
     }
