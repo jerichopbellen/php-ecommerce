@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 17, 2025 at 10:47 AM
+-- Generation Time: Nov 18, 2025 at 04:40 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -54,7 +54,8 @@ INSERT INTO `addresses` (`address_id`, `recipient`, `street`, `barangay`, `city`
 (24, 'Jericho Bellen', '99 New York street', 'Silangan', 'Cubao', 'Quezon City', '1234', 'USA', '09202558774', 1),
 (26, 'Lisa', '1 Seoul st.', 'Silangan', 'Cubao', 'Quezon City', '1234', 'Philippines', '09202558774', 19),
 (33, 'taylor swift', '33 Uptown St.', 'Fort Bonifacio', 'Makati', 'Metro Manila', '2587', 'Philippines', '12345678910', 23),
-(34, 'joe alwyn', '31 New York', 'Hawaii', 'Harvard', 'MIMAROPA', '1478', 'Philippines', '9876543210', 23);
+(34, 'joe alwyn', '31 New York', 'Hawaii', 'Harvard', 'MIMAROPA', '1478', 'Philippines', '9876543210', 23),
+(37, 'kai', 'Dita Street', 'North Signal', 'South Korea', 'MIMAROPA', '1360', 'Philippines', '09202558774', 26);
 
 -- --------------------------------------------------------
 
@@ -168,13 +169,10 @@ INSERT INTO `orders` (`order_id`, `tracking_number`, `created_at`, `user_id`, `a
 (26, 'ORD-20251113-8685', '2025-11-13 03:00:47', 1, 8, 'cod', 'Delivered', NULL),
 (27, 'ORD-20251113-6882', '2025-11-13 03:09:28', 1, 24, 'cod', 'Delivered', NULL),
 (28, 'ORD-20251113-0927', '2025-11-13 03:13:43', 1, 8, 'cod', 'Received', NULL),
-(29, 'ORD-20251113-0823', '2025-11-13 03:27:24', 1, 24, 'cod', 'Received', NULL),
-(30, 'ORD-20251113-6126', '2025-11-13 06:17:37', 1, 24, 'cod', 'Cancelled', NULL),
 (31, 'ORD-20251114-5999', '2025-11-14 11:13:33', 1, 8, 'cod', 'Shipped', NULL),
 (32, 'ORD-20251114-3941', '2025-11-14 11:15:05', 1, 24, 'cod', 'Shipped', NULL),
 (33, 'ORD-20251114-0994', '2025-11-14 11:44:19', 4, 10, 'cod', 'Received', NULL),
 (35, 'ORD-20251114-1417', '2025-11-14 12:18:51', 1, 8, 'cod', 'Shipped', NULL),
-(36, 'ORD-20251114-9814', '2025-11-14 12:24:43', 1, 8, 'cod', 'Cancelled', '2025-11-14 20:27:05'),
 (37, 'ORD-20251114-4811', '2025-11-14 12:35:59', 1, 8, 'cod', 'Shipped', NULL),
 (40, 'ORD-20251115-1535', '2025-11-15 06:29:12', 19, 26, 'cod', 'Received', NULL),
 (41, 'ORD-20251116-9512', '2025-11-15 12:15:44', 19, 26, 'cod', 'Shipped', NULL),
@@ -187,10 +185,13 @@ INSERT INTO `orders` (`order_id`, `tracking_number`, `created_at`, `user_id`, `a
 (50, NULL, '2025-11-16 14:06:00', 23, 33, 'cod', 'Cancelled', '2025-11-16 22:11:24'),
 (51, 'ORD-20251116-7588', '2025-11-16 14:26:06', 23, 34, 'cod', 'Delivered', NULL),
 (52, 'ORD-20251116-1212', '2025-11-16 14:30:39', 1, 8, 'cod', 'Delivered', NULL),
-(53, NULL, '2025-11-17 03:56:03', 1, 8, 'cod', 'Processing', NULL),
-(54, NULL, '2025-11-17 09:21:53', 11, 18, 'cod', 'Received', NULL),
+(53, 'ORD-20251117-5744', '2025-11-17 03:56:03', 1, 8, 'cod', 'Shipped', NULL),
 (55, 'ORD-20251117-3336', '2025-11-17 09:29:27', 11, 18, 'cod', 'Delivered', NULL),
-(56, 'ORD-20251117-1351', '2025-11-17 09:36:00', 1, 8, 'cod', 'Delivered', NULL);
+(56, 'ORD-20251117-1351', '2025-11-17 09:36:00', 1, 8, 'cod', 'Delivered', NULL),
+(57, 'ORD-20251117-1086', '2025-11-17 16:05:01', 1, 8, 'cod', 'Shipped', NULL),
+(58, 'ORD-20251117-7568', '2025-11-17 22:46:27', 11, 18, 'cod', 'Delivered', NULL),
+(59, NULL, '2025-11-17 22:50:40', 11, 18, 'cod', 'Pending', NULL),
+(60, NULL, '2025-11-18 02:42:47', 26, 37, 'cod', 'Pending', NULL);
 
 -- --------------------------------------------------------
 
@@ -222,8 +223,6 @@ INSERT INTO `order_items` (`order_items_id`, `order_id`, `variant_id`, `quantity
 (39, 28, 4, 3, 8998.00),
 (40, 28, 8, 3, 8999.00),
 (41, 28, 10, 3, 6999.00),
-(42, 29, 4, 1, 8998.00),
-(43, 30, 23, 1, 10999.00),
 (44, 31, 25, 1, 9999.00),
 (45, 32, 13, 2, 6999.00),
 (46, 33, 8, 3, 8999.00),
@@ -232,7 +231,6 @@ INSERT INTO `order_items` (`order_items_id`, `order_id`, `variant_id`, `quantity
 (49, 33, 63, 1, 899.00),
 (50, 33, 19, 1, 9999.00),
 (52, 35, 4, 1, 8998.00),
-(53, 36, 17, 1, 8999.00),
 (54, 37, 11, 1, 6999.00),
 (57, 40, 4, 1, 8998.00),
 (58, 41, 13, 1, 6999.00),
@@ -248,9 +246,14 @@ INSERT INTO `order_items` (`order_items_id`, `order_id`, `variant_id`, `quantity
 (71, 51, 5, 1, 12999.00),
 (72, 52, 70, 2, 6999.00),
 (73, 53, 5, 1, 12999.00),
-(74, 54, 5, 1, 12999.00),
 (75, 55, 4, 2, 8998.00),
-(76, 56, 62, 1, 1099.00);
+(76, 56, 62, 1, 1099.00),
+(77, 57, 15, 2, 799.00),
+(78, 58, 11, 2, 6999.00),
+(79, 59, 13, 3, 6999.00),
+(80, 60, 22, 1, 8999.00),
+(81, 60, 8, 1, 8999.00),
+(82, 60, 11, 1, 6999.00);
 
 -- --------------------------------------------------------
 
@@ -278,7 +281,7 @@ INSERT INTO `products` (`product_id`, `name`, `description`, `dimension`, `creat
 (3, 'Ergonomic Office Chair', 'Adjustable lumbar support and breathable mesh for all-day productivity.', '65 x 65 x 110 cm', '2025-11-06 12:16:05', 1, 6),
 (4, 'Extendable Dining Table', 'Expandable surface accommodates guests while saving space when not in use.', '180 x 90 x 75 cm', '2025-11-06 12:16:52', 1, 5),
 (5, 'Tall Pantry Cabinet', 'Vertical storage for kitchen staples, maximizing space in compact areas.', '80 x 40 x 200 cm', '2025-11-06 12:17:35', 1, 3),
-(6, 'Jute Round Rug', 'Natural fiber and circular shape bring earthy texture to modern interiors.', '150 cm diameter x 1 cm', '2025-11-06 12:18:22', 1, 4),
+(6, 'Jute Round Rug', 'Natural fiber and circular shape bring earthy texture to modern interiors.', '150 cm x 150cm x 1 cm', '2025-11-06 12:18:22', 1, 4),
 (7, 'Reclining Sofa', 'Plush seating with adjustable recline for ultimate comfort and style.', '220 x 95 x 100 cm', '2025-11-07 16:13:15', 4, 1),
 (8, 'Sleeper Sofa with Storage', 'Converts into a bed and includes hidden compartments for bedding or essentials.', '200 x 90 x 85 cm', '2025-11-07 16:14:03', 2, 1),
 (9, 'Tufted Loveseat', 'Luxurious upholstery with button tufting, perfect for cozy corners.', '140 x 85 x 90 cm', '2025-11-07 16:15:17', 5, 1),
@@ -503,7 +506,7 @@ CREATE TABLE `product_variants` (
 
 INSERT INTO `product_variants` (`variant_id`, `color`, `material`, `price`, `product_id`) VALUES
 (4, 'blue', 'metal', 8998.00, 1),
-(5, 'brown', 'metal', 12999.00, 1),
+(5, 'brown', 'metal', 8998.00, 1),
 (6, 'black', 'plastic', 1999.00, 4),
 (7, 'black', 'wood', 7999.00, 4),
 (8, 'beige', 'linen', 8999.00, 2),
@@ -561,8 +564,8 @@ INSERT INTO `product_variants` (`variant_id`, `color`, `material`, `price`, `pro
 (65, 'pink', '', 999.00, 32),
 (66, 'red', '', 999.00, 32),
 (70, 'white', '', 6999.00, 16),
-(73, 'white', '', 6999.00, 16),
-(74, 'white', '', 6999.00, 16);
+(77, 'beige', 'wood', 10999.00, 1),
+(79, 'pink', '', 6999.00, 16);
 
 -- --------------------------------------------------------
 
@@ -610,16 +613,16 @@ CREATE TABLE `stocks` (
 
 INSERT INTO `stocks` (`variant_id`, `quantity`) VALUES
 (4, 57),
-(5, 59),
+(5, 58),
 (6, 0),
 (7, 0),
 (8, 86),
 (9, 42),
 (10, 98),
-(11, 95),
+(11, 93),
 (12, 0),
 (13, 68),
-(15, 58),
+(15, 56),
 (16, 93),
 (17, 69),
 (18, 93),
@@ -668,8 +671,8 @@ INSERT INTO `stocks` (`variant_id`, `quantity`) VALUES
 (65, 58),
 (66, 23),
 (70, 48),
-(73, 60),
-(74, 60);
+(77, 54),
+(79, 93);
 
 -- --------------------------------------------------------
 
@@ -751,7 +754,7 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`user_id`, `email`, `password_hash`, `first_name`, `last_name`, `is_active`, `created_at`, `role`, `img_path`, `is_deleted`, `deleted_at`) VALUES
 (1, 'jerichopbellen@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Jericho', 'Bellen', 1, '2025-11-01 17:13:58', 'admin', '/Furnitures/user/avatars/default-avatar.png', 0, NULL),
 (4, 'deleted_4@example.com', '850b36862fd1c00860ed3a968e75dc110eb9bcf6', 'Deleted', 'User', 0, '2025-11-02 18:05:08', 'customer', '/Furnitures/user/avatars/default-avatar.png', 1, '2025-11-15 20:13:05'),
-(11, 'arianagrande@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Ariana', 'Grande', 1, '2025-11-02 18:41:44', 'admin', '', 0, NULL),
+(11, 'arianagrande@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Ariana', 'Grande', 1, '2025-11-02 18:41:44', 'customer', '', 0, NULL),
 (12, 'deleted_12@example.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Deleted', 'User', 0, '2025-11-02 18:45:39', 'customer', '', 1, '2025-11-10 13:39:10'),
 (17, 'deleted_17@example.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Deleted', 'User', 0, '2025-11-02 18:54:02', 'customer', '', 1, '2025-11-10 13:37:10'),
 (18, 'deleted_18@example.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Deleted', 'User', 0, '2025-11-02 18:58:11', 'customer', '', 1, '2025-11-10 13:32:38'),
@@ -760,7 +763,8 @@ INSERT INTO `users` (`user_id`, `email`, `password_hash`, `first_name`, `last_na
 (21, 'deleted_21@example.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'Deleted', 'User', 0, '2025-11-14 01:27:15', 'customer', '/Furnitures/user/avatars/profile_691614f2f08bc5.39360019.jpg', 1, '2025-11-15 20:22:59'),
 (23, 'taylorswift@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'taylor', 'swift', 1, '2025-11-16 21:40:02', 'customer', '/Furnitures/user/avatars/6919d455b652e_top-view-soft-drink-glass-with-ice-cubes-straw.jpg', 0, NULL),
 (24, 'olivia@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'olivia', 'rodrigo', 1, '2025-11-17 01:45:58', 'customer', '/Furnitures/user/avatars/default-avatar.png', 0, NULL),
-(25, 'sabrinacarpenter@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'sabrina', 'carpenter', 1, '2025-11-17 02:00:08', 'customer', '/Furnitures/user/avatars/profile_691a1127f0a626.90149803.jpg', 0, NULL);
+(25, 'sabrinacarpenter@gmail.com', '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', 'sabrina', 'carpenter', 1, '2025-11-17 02:00:08', 'customer', '/Furnitures/user/avatars/profile_691a1127f0a626.90149803.jpg', 0, NULL),
+(26, 'xeanalexandra.ladignon@depedparanaquecity.com', '0577faaa110ded5c9b472a4df7493117fd07add9', 'Xean', 'Ladignon', 1, '2025-11-18 10:40:08', 'customer', NULL, 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -929,7 +933,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `addresses`
 --
 ALTER TABLE `addresses`
-  MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+  MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
 
 --
 -- AUTO_INCREMENT for table `brands`
@@ -941,7 +945,7 @@ ALTER TABLE `brands`
 -- AUTO_INCREMENT for table `cart_items`
 --
 ALTER TABLE `cart_items`
-  MODIFY `cart_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=109;
+  MODIFY `cart_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=126;
 
 --
 -- AUTO_INCREMENT for table `categories`
@@ -959,31 +963,31 @@ ALTER TABLE `contact_messages`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `order_items_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
+  MODIFY `order_items_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `product_images`
 --
 ALTER TABLE `product_images`
-  MODIFY `image_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=98;
+  MODIFY `image_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=107;
 
 --
 -- AUTO_INCREMENT for table `product_variants`
 --
 ALTER TABLE `product_variants`
-  MODIFY `variant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
+  MODIFY `variant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=80;
 
 --
 -- AUTO_INCREMENT for table `reviews`
@@ -1001,7 +1005,7 @@ ALTER TABLE `tags`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- Constraints for dumped tables
